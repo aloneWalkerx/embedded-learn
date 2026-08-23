@@ -7,7 +7,7 @@
 
   <Targets>
     <Target>
-      <TargetName>atk_f407</TargetName>
+      <TargetName>Template</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pCCUsed>5060960::V5.06 update 7 (build 960)::.\ARMCC</pCCUsed>
@@ -462,16 +462,6 @@
               <FileName>stm32f4xx_hal_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\STM32F4xx_HAL_Driver\Src\stm32f4xx_hal_uart.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>Drivers/BSP</GroupName>
-          <Files>
-            <File>
-              <FileName>led-i.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Drivers\BSP\LED\led-i.c</FilePath>
             </File>
           </Files>
         </Group>
