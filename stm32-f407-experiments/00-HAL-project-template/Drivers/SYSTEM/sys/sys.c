@@ -141,7 +141,7 @@ uint8_t sys_stm32_clock_init(uint32_t plln, uint32_t pllm, uint32_t pllp, uint32
     //锁相环分频器
     rcc_osc_init.PLL.PLLM = pllm;
     
-    //锁相环时钟倍频器
+    //锁相环时钟分频器
     rcc_osc_init.PLL.PLLP = pllp;
     
     //锁相环外设分频器

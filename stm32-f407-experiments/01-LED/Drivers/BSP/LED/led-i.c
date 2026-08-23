@@ -11,10 +11,10 @@ void led_i_init(void)
     //使能LED0对应引脚类型的时钟
     LED0_GPIO_CLK_ENABLE();
     //使能LED1对应引脚类型的时钟
-    LED1_GPIO_CLK_ENABLE();
+   // LED1_GPIO_CLK_ENABLE(); //重复，注释掉
     
     //3，设置引脚为LED0
-    gpio_init_struct.Pin = LED0_GPIO_PIN;
+    gpio_init_struct.Pin = LED0_GPIO_PIN | LED1_GPIO_PIN; //代码优化，合二为一，两个引脚都是同一种类型，GPIOF
     //设置模式为推挽输出
     gpio_init_struct.Mode = GPIO_MODE_OUTPUT_PP;
     //设置为下拉
@@ -25,7 +25,7 @@ void led_i_init(void)
     HAL_GPIO_Init(LED0_GPIO_PORT, &gpio_init_struct);
     
     
-    //4，设置引脚为LED1
+  /*  //4，设置引脚为LED1
     gpio_init_struct.Pin = LED1_GPIO_PIN;
     //设置模式为推挽输出
     gpio_init_struct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -35,7 +35,7 @@ void led_i_init(void)
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
     //根据参数初始化LED0引脚
     HAL_GPIO_Init(LED1_GPIO_PORT, &gpio_init_struct);
-    
+    */
     //,5，默认关闭LED0、LED1
     LED0(1);
     LED1(1);

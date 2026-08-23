@@ -13,15 +13,17 @@ void led_e_init(void)
     LEDR_GPIO_CLK_ENABLE();
     
     //使能LEDY对应引脚类型的时钟
+   /* 
+    注释掉，重复
     LEDY_GPIO_CLK_ENABLE();
     
     //使能LEDG对应引脚类型的时钟
     LEDG_GPIO_CLK_ENABLE();
 
-    
+    */
     
     //3，设置引脚为LEDR
-    gpio_init_struct.Pin = LEDR_GPIO_PIN;
+    gpio_init_struct.Pin = LEDR_GPIO_PIN | LEDY_GPIO_PIN |LEDG_GPIO_PIN;
     //设置模式为推挽输出
     gpio_init_struct.Mode = GPIO_MODE_OUTPUT_PP;
     //设置为下拉
@@ -31,7 +33,8 @@ void led_e_init(void)
     //根据参数初始化LED0引脚
     HAL_GPIO_Init(LEDR_GPIO_PORT, &gpio_init_struct);
 
-
+/*
+    注释掉，代码重复，合三为一，都是同一种引脚类型，GPIOA
     //4，设置引脚为LEDY
     gpio_init_struct.Pin = LEDY_GPIO_PIN;
     //设置模式为推挽输出
@@ -55,10 +58,11 @@ void led_e_init(void)
     //根据参数初始化LED0引脚
     HAL_GPIO_Init(LEDG_GPIO_PORT, &gpio_init_struct);
     
+    */
     //6，默认关闭LEDR,LEDY,LEDG
     LEDR(0);
-    LEDR(0);
-    LEDR(0);
+    LEDY(0);
+    LEDG(0);
 }
 
 //7，开启外设LEDR
