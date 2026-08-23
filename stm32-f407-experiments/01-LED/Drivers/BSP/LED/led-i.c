@@ -1,17 +1,19 @@
 #include "./BSP/LED/led-i.h"
 
 
+//初始化板载LED
 void led_i_init(void)
 {
-    //创建引脚初始化实例
+    //1，创建引脚初始化实例
     GPIO_InitTypeDef gpio_init_struct = {0};
     
+    //2，使能对应引脚类型的时钟
     //使能LED0对应引脚类型的时钟
     LED0_GPIO_CLK_ENABLE();
     //使能LED1对应引脚类型的时钟
     LED1_GPIO_CLK_ENABLE();
     
-    //设置引脚为LED0
+    //3，设置引脚为LED0
     gpio_init_struct.Pin = LED0_GPIO_PIN;
     //设置模式为推挽输出
     gpio_init_struct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -23,7 +25,7 @@ void led_i_init(void)
     HAL_GPIO_Init(LED0_GPIO_PORT, &gpio_init_struct);
     
     
-    //设置引脚为LED1
+    //4，设置引脚为LED1
     gpio_init_struct.Pin = LED1_GPIO_PIN;
     //设置模式为推挽输出
     gpio_init_struct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -34,7 +36,7 @@ void led_i_init(void)
     //根据参数初始化LED0引脚
     HAL_GPIO_Init(LED1_GPIO_PORT, &gpio_init_struct);
     
-    // 默认关闭LED0、LED1
+    //,5，默认关闭LED0、LED1
     LED0(1);
     LED1(1);
     

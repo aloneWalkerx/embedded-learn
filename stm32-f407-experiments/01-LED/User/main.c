@@ -2,6 +2,7 @@
 #include "./SYSTEM/delay/delay.h" 
 #include "./SYSTEM/usart/usart.h" 
 #include "./BSP/LED/led-i.h"
+#include "./BSP/LED/led-e.h"
 int main(void) 
 { 
     /*
@@ -38,18 +39,41 @@ int main(void)
     //初始化板载LED
     led_i_init();
     
+    //初始化外设LED
+    led_e_init();
+    
     while (1)
     {
-        // 开启LED0
+         // 开启板载LED0
         LED0(0);
-        //关闭LED1
+        //开启外设LEDR
+        LEDR(1);
+        //关闭板载LED1
         LED1(1);
+        //关闭外设LEDY
+        LEDY(0);
+        //关闭外设LEDY
+        LEDG(0);
         //延时500毫秒
         delay_ms(500);
-        //关闭LED0
+        //关闭板载LED0
         LED0(1);
-        //开启LED1
+        //关闭外设LEDR
+        LEDR(0);
+        //开启板载LED1
         LED1(0);
+        //开启外设LEDY
+        LEDY(1);
+        //延时500毫秒
+        delay_ms(500);
+        //关闭外设LEDY
+        LEDY(0);
+        //开启外设LEDG
+        LEDG(1);
+        //延时500毫秒
+        delay_ms(500);
+         //关闭外设LEDG
+        LEDG(1);
         //延时500毫秒
         delay_ms(500);
         
