@@ -61,5 +61,26 @@
 //6，初始化外设LED
 void led_e_init(void);                                                
                                                 
+//7，开启外设LEDR
+void led_R_on(void);
 
+//8，关闭外设LEDR
+void led_R_off(void);
+
+//9，开启外设LEDY
+void led_Y_on(void);
+
+//10，关闭外设LEDY
+void led_Y_off(void);
+                                                
+//11，开启外设LEDG
+void led_G_on(void);
+
+//12，关闭外设LEDG
+void led_G_off(void);
+                                                
+      
+                                                
+                                                
 #endif
+

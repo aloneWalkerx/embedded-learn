@@ -43,8 +43,46 @@ int main(void)
     led_e_init();
     
     while (1)
-    {
-         // 开启板载LED0
+    {   
+        //新版LED状态
+        // 开启板载LED0
+        led_0_on();
+        //开启外设LEDR
+        led_R_on();
+        //关闭板载LED1
+        led_1_off();
+        //关闭外设LEDY
+        led_Y_off();
+        //关闭外设LEDG
+        led_G_off();
+        //延时500毫秒
+        delay_ms(500);
+        //关闭板载LED0
+        led_0_off();
+        //关闭外设LEDR
+        led_R_off();
+        //开启板载LED1
+        led_1_on();
+        //开启外设LEDY
+        led_Y_on();
+        //延时500毫秒
+        delay_ms(500);
+        //关闭外设LEDY
+        led_Y_off();
+        //开启外设LEDG
+        led_G_on();
+        //延时500毫秒
+        delay_ms(500);
+         //关闭外设LEDG
+        led_G_off();
+        //延时500毫秒
+        delay_ms(500);
+        
+        
+        /*
+        //旧版LED状态：
+       // 0和1可读性太差，本实验有板载LED以及外设LED且开启关闭状态不一样
+        // 开启板载LED0
         LED0(0);
         //开启外设LEDR
         LEDR(1);
@@ -52,7 +90,7 @@ int main(void)
         LED1(1);
         //关闭外设LEDY
         LEDY(0);
-        //关闭外设LEDY
+        //关闭外设LEDG
         LEDG(0);
         //延时500毫秒
         delay_ms(500);
@@ -76,7 +114,7 @@ int main(void)
         LEDG(1);
         //延时500毫秒
         delay_ms(500);
-        
+        */
     }
     
 } 

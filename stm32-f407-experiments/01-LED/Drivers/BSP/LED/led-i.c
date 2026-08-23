@@ -41,3 +41,23 @@ void led_i_init(void)
     LED1(1);
     
 }
+
+void led_0_on(void)
+ {
+    HAL_GPIO_WritePin(LED0_GPIO_PORT, LED0_GPIO_PIN, GPIO_PIN_RESET); 
+ }
+
+void led_0_off(void)
+ {
+    HAL_GPIO_WritePin(LED0_GPIO_PORT, LED0_GPIO_PIN, GPIO_PIN_SET); 
+ }
+void led_1_on(void)
+  {
+    HAL_GPIO_WritePin(LED1_GPIO_PORT, LED1_GPIO_PIN, GPIO_PIN_RESET); 
+  }
+void led_1_off(void)
+  {
+    HAL_GPIO_WritePin(LED1_GPIO_PORT, LED1_GPIO_PIN, GPIO_PIN_SET); 
+ }
+
+

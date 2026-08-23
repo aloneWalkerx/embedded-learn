@@ -3,7 +3,7 @@
 
 
 //初始化外设载LED
-void led_e_init()
+void led_e_init(void)
 {
     //1，创建引脚初始化实例
     GPIO_InitTypeDef gpio_init_struct = {0};
@@ -60,3 +60,40 @@ void led_e_init()
     LEDR(0);
     LEDR(0);
 }
+
+//7，开启外设LEDR
+void led_R_on(void)
+ {
+    HAL_GPIO_WritePin(LEDR_GPIO_PORT, LEDR_GPIO_PIN, GPIO_PIN_SET); 
+ }
+ 
+//8，关闭外设LEDR
+void led_R_off(void)
+ {
+    HAL_GPIO_WritePin(LEDR_GPIO_PORT, LEDR_GPIO_PIN, GPIO_PIN_RESET); 
+ }
+ 
+//9，开启外设LEDY
+void led_Y_on(void)
+ {
+    HAL_GPIO_WritePin(LEDY_GPIO_PORT, LEDY_GPIO_PIN, GPIO_PIN_SET); 
+ }
+ 
+//10，关闭外设LEDY
+void led_Y_off(void)
+ {
+    HAL_GPIO_WritePin(LEDY_GPIO_PORT, LEDY_GPIO_PIN, GPIO_PIN_RESET); 
+ }
+ 
+//11，开启外设LEDG
+void led_G_on(void)
+ {
+    HAL_GPIO_WritePin(LEDG_GPIO_PORT, LEDG_GPIO_PIN, GPIO_PIN_SET); 
+ }
+ 
+//12，关闭外设LEDG
+void led_G_off(void)
+ {
+    HAL_GPIO_WritePin(LEDG_GPIO_PORT, LEDG_GPIO_PIN, GPIO_PIN_RESET); 
+ }
+

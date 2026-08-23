@@ -49,4 +49,17 @@
 //7，LED板载初始化函数声明
 void led_i_init(void);
 
+//8，开启板载LED0
+void led_0_on(void);
+
+//9，关闭板载LED0
+void led_0_off(void);
+
+//10，开启板载LED1
+void led_1_on(void);
+
+//11，关闭板载LED1
+void led_1_off(void);
+
+
 #endif
