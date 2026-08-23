@@ -7,7 +7,7 @@
 
   <Targets>
     <Target>
-      <TargetName>Template</TargetName>
+      <TargetName>atk_f407</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pCCUsed>5060960::V5.06 update 7 (build 960)::.\ARMCC</pCCUsed>
@@ -466,7 +466,17 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>Resdme</GroupName>
+          <GroupName>Drivers/BSP</GroupName>
+          <Files>
+            <File>
+              <FileName>led-i.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\LED\led-i.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Readme</GroupName>
         </Group>
       </Groups>
     </Target>

@@ -19,7 +19,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-//#include "main.h" 注释掉，改用正点原子的·"./SYSTEM/sys/sys.h"
+//#include "main.h" 注释掉，改用正点原子的 "./SYSTEM/sys/sys.h"
 #include "./SYSTEM/sys/sys.h"
 #include "stm32f4xx_it.h"
 

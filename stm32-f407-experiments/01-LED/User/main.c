@@ -1,7 +1,7 @@
 #include "./SYSTEM/sys/sys.h" 
 #include "./SYSTEM/delay/delay.h" 
 #include "./SYSTEM/usart/usart.h" 
- 
+#include "./BSP/LED/led-i.h"
 int main(void) 
 { 
     /*
@@ -35,8 +35,26 @@ int main(void)
     //初始化串口
     usart_init(115200);
     
+    //初始化板载LED
+    led_i_init();
     
-    
+    while (1)
+    {
+        // 开启LED0
+        LED0(0);
+        //关闭LED1
+        LED1(1);
+        //延时500毫秒
+        delay_ms(500);
+        //关闭LED0
+        LED0(1);
+        //开启LED1
+        LED1(0);
+        //延时500毫秒
+        delay_ms(500);
+        
+    }
+     
     
     
     

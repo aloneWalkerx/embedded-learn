@@ -79,7 +79,6 @@
   *        This value is used by the RCC HAL module to compute the system frequency
   *        (when HSE is used as system clock source, directly or through the PLL).  
   */
-//TODOTODO
 #if !defined  (HSE_VALUE) 
   #define HSE_VALUE    (8000000U) /*!< Value of the External oscillator in Hz */
 #endif /* HSE_VALUE */
@@ -93,7 +92,6 @@
   *        This value is used by the RCC HAL module to compute the system frequency
   *        (when HSI is used as system clock source, directly or through the PLL). 
   */
-  //TODOTODO
 #if !defined  (HSI_VALUE)
   #define HSI_VALUE    (16000000U) /*!< Value of the Internal oscillator in Hz*/
 #endif /* HSI_VALUE */
@@ -101,7 +99,6 @@
 /**
   * @brief Internal Low Speed oscillator (LSI) value.
   */
-  //TODOTODO
 #if !defined  (LSI_VALUE) 
  #define LSI_VALUE  (32000U)    
 #endif /* LSI_VALUE */                      /*!< Value of the Internal Low Speed oscillator in Hz
@@ -110,7 +107,6 @@
 /**
   * @brief External Low Speed oscillator (LSE) value.
   */
-  //TODOTODO
 #if !defined  (LSE_VALUE)
  #define LSE_VALUE  (32768U)    /*!< Value of the External Low Speed oscillator in Hz */
 #endif /* LSE_VALUE */

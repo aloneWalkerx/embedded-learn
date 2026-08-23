@@ -198,7 +198,7 @@ uint8_t sys_stm32_clock_init(uint32_t plln, uint32_t pllm, uint32_t pllp, uint32
         __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
     }
     return 0;
-}
+} 
 
 
 #ifdef  USE_FULL_ASSERT

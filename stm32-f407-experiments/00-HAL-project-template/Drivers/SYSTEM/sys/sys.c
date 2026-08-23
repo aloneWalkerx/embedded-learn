@@ -1,3 +1,26 @@
+/**
+ ****************************************************************************************************
+ * @file        sys.c
+ * @author      正点原子团队(ALIENTEK)
+ * @version     V1.0
+ * @date        2021-10-14
+ * @brief       系统初始化代码(包括时钟配置/中断管理/GPIO设置等)
+ * @license     Copyright (c) 2020-2032, 广州市星翼电子科技有限公司
+ ****************************************************************************************************
+ * @attention
+ *
+ * 实验平台:正点原子 M144Z-M4最小系统板STM32F407版
+ * 在线视频:www.yuanzige.com
+ * 技术论坛:www.openedv.com
+ * 公司网址:www.alientek.com
+ * 购买地址:openedv.taobao.com
+ *
+ * 修改说明
+ * V1.0 20211014
+ * 第一次发布
+ ****************************************************************************************************
+ */
+
 #include "./SYSTEM/sys/sys.h"
 
 
@@ -13,6 +36,15 @@ void sys_nvic_set_vector_table(uint32_t baseaddr, uint32_t offset)
     SCB->VTOR = baseaddr | (offset & (uint32_t)0xFFFFFE00);
 }
 
+/**
+ * @brief       执行: WFI指令(执行完该指令进入低功耗状态, 等待中断唤醒)
+ * @param       无
+ * @retval      无
+ */
+void sys_wfi_set(void)
+{
+    __ASM volatile("wfi");
+}
 
 /**
  * @brief       关闭所有中断(但是不包括fault和NMI中断)
@@ -34,18 +66,16 @@ void sys_intx_enable(void)
     __ASM volatile("cpsie i");
 }
 
-
-
 /**
- * @brief       执行: WFI指令(执行完该指令进入低功耗状态, 等待中断唤醒)
- * @param       无
+ * @brief       设置栈顶地址
+ * @note        左侧若出现红X, 属于MDK误报, 实际是没问题的
+ * @param       addr: 栈顶地址
  * @retval      无
  */
-void sys_wfi_set(void)
+void sys_msr_msp(uint32_t addr)
 {
-    __ASM volatile("wfi");
+    __set_MSP(addr);    /* 设置栈顶地址 */
 }
-
 
 /**
  * @brief       进入待机模式
@@ -58,7 +88,6 @@ void sys_standby(void)
     SET_BIT(PWR->CR, PWR_CR_PDDS); /* 进入待机模式 */
 }
 
-
 /**
  * @brief       系统软复位
  * @param       无
@@ -68,21 +97,6 @@ void sys_soft_reset(void)
 {
     NVIC_SystemReset();
 }
-
-
-/**
- * @brief       设置栈顶地址
- * @note        左侧若出现红X, 属于MDK误报, 实际是没问题的
- * @param       addr: 栈顶地址
- * @retval      无
- */
-void sys_msr_msp(uint32_t addr)
-{
-    __set_MSP(addr);    /* 设置栈顶地址 */
-}
-
-
-
 
 /**
  * @brief       时钟设置函数
@@ -114,88 +128,50 @@ void sys_msr_msp(uint32_t addr)
  * @retval      错误代码: 0, 成功; 1, 错误;
  */
 uint8_t sys_stm32_clock_init(uint32_t plln, uint32_t pllm, uint32_t pllp, uint32_t pllq)
-{   
-    //定义初始化RCC（复位与时钟控制器）返回状态，默认为0
+{
     HAL_StatusTypeDef ret = HAL_OK;
-    
-    //RCC:复位与时钟控制器
-    //创建震荡器实例（内部/外部震荡器，HSI,LSI,HSE,LSE）
     RCC_OscInitTypeDef rcc_osc_init = {0};
-    
-    //创建时钟实例（SYSTEM，AHB,APB总线时钟）
     RCC_ClkInitTypeDef rcc_clk_init = {0};
-    
-    //使能电源控制（PWR）时钟
-    __HAL_RCC_PWR_CLK_ENABLE();
 
-    //设置调压器输出电压级别，以便在器件未以最大频率工作
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    __HAL_RCC_PWR_CLK_ENABLE();                                         /* 使能PWR时钟 */
+
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);      /* 设置调压器输出电压级别，以便在器件未以最大频率工作 */
 
     /* 使能HSE，并选择HSE作为PLL时钟源，配置PLL1，开启USB时钟 */
-    //时钟源类型为HSE,外部高速晶振
-    rcc_osc_init.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    
-    //开启外部高速晶振
-    rcc_osc_init.HSEState = RCC_HSE_ON;
-    
-    //开启PLL锁相环
-    rcc_osc_init.PLL.PLLState = RCC_PLL_ON;
-    
-    //锁相环时钟源为外部高速晶振
+    rcc_osc_init.OscillatorType = RCC_OSCILLATORTYPE_HSE;        /* 时钟源为HSE */
+    rcc_osc_init.HSEState = RCC_HSE_ON;                          /* 打开HSE */
+    rcc_osc_init.PLL.PLLState = RCC_PLL_ON;                      /* 打开PLL */
     rcc_osc_init.PLL.PLLSource = RCC_PLLSOURCE_HSE;              /* PLL时钟源选择HSE */
-    
-    //锁相环倍频系数
     rcc_osc_init.PLL.PLLN = plln;
-    
-    //锁相环分频器
     rcc_osc_init.PLL.PLLM = pllm;
-    
-    //锁相环时钟倍频器
     rcc_osc_init.PLL.PLLP = pllp;
-    
-    //锁相环外设分频器
     rcc_osc_init.PLL.PLLQ = pllq;
-    
-    //初始化RCC(复位与时钟控制器)
-    ret = HAL_RCC_OscConfig(&rcc_osc_init);  
-    
-    //判断初始换结果，失败可以加入自己的处理逻辑
+    ret = HAL_RCC_OscConfig(&rcc_osc_init);                      /* 初始化RCC */
     if(ret != HAL_OK)
     {
-        return 1;
+        return 1;                                                /* 时钟初始化失败，可以在这里加入自己的处理 */
     }
 
-    //初始化时钟类型，包含SYSCLK(系统时钟)，HCLK(AHB时钟)，PCLIK1(APB1时钟)，PCLK2(APB2时钟)
+    /* 选中PLL作为系统时钟源并且配置HCLK,PCLK1和PCLK2 */
     rcc_clk_init.ClockType = ( RCC_CLOCKTYPE_SYSCLK \
                                     | RCC_CLOCKTYPE_HCLK \
                                     | RCC_CLOCKTYPE_PCLK1 \
                                     | RCC_CLOCKTYPE_PCLK2);
-    //设置系统时钟时钟源为PLL（锁相环）
-    rcc_clk_init.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    
-    //设置AHB分频系数为1
-    rcc_clk_init.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    
-    //APB1分频系数为4
-    rcc_clk_init.APB1CLKDivider = RCC_HCLK_DIV4;
-    
-    //APB2分频系数为2 
-    rcc_clk_init.APB2CLKDivider = RCC_HCLK_DIV2;
-    
-    //根据参数配置时钟，同时设置FLASH延时周期为5WS，就是6个CPU周期
-    ret = HAL_RCC_ClockConfig(&rcc_clk_init, FLASH_LATENCY_5);
-    
-    //判断时钟设置结果，如果失败则根据自己的业务处理
+
+    rcc_clk_init.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;         /* 设置系统时钟时钟源为PLL */
+    rcc_clk_init.AHBCLKDivider = RCC_SYSCLK_DIV1;                /* AHB分频系数为1 */
+    rcc_clk_init.APB1CLKDivider = RCC_HCLK_DIV4;                 /* APB1分频系数为4 */
+    rcc_clk_init.APB2CLKDivider = RCC_HCLK_DIV2;                 /* APB2分频系数为2 */
+    ret = HAL_RCC_ClockConfig(&rcc_clk_init, FLASH_LATENCY_5);   /* 同时设置FLASH延时周期为5WS，也就是6个CPU周期 */
     if(ret != HAL_OK)
     {
-        return 1;
+        return 1;                                                /* 时钟初始化失败 */
     }
     
-    // STM32F405x/407x/415x/417x Z版本的器件支持预取功能
+    /* STM32F405x/407x/415x/417x Z版本的器件支持预取功能 */
     if (HAL_GetREVID() == 0x1001)
     {
-        //使能flash预取
-        __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+        __HAL_FLASH_PREFETCH_BUFFER_ENABLE();                    /* 使能flash预取 */
     }
     return 0;
 }

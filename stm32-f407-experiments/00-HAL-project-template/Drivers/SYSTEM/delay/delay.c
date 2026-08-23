@@ -1,4 +1,21 @@
 /**
+ ****************************************************************************************************
+ * @file        delay.c
+ * @author      正点原子团队(ALIENTEK)
+ * @version     V1.1
+ * @date        2023-02-25
+ * @brief       使用SysTick的普通计数模式对延迟进行管理(支持ucosii)
+ *              提供delay_init初始化函数， delay_us和delay_ms等延时函数
+ * @license     Copyright (c) 2022-2032, 广州市星翼电子科技有限公司
+ ****************************************************************************************************
+ * @attention
+ *
+ * 实验平台:正点原子 M144Z-M4最小系统板STM32F407版
+ * 在线视频:www.yuanzige.com
+ * 技术论坛:www.openedv.com
+ * 公司网址:www.alientek.com
+ * 购买地址:openedv.taobao.com
+ *
  * 修改说明
  * V1.0 20230206
  * 第一次发布
@@ -99,24 +116,68 @@ void SysTick_Handler(void)
  * @retval    无
  */  
 void delay_init(uint16_t sysclk)
+{
+#if SYS_SUPPORT_OS                                      /* 如果需要支持OS */
+    uint32_t reload;
+#endif
+    g_fac_us = sysclk;                                  /* 由于在HAL_Init中已对systick做了配置，所以这里无需重新配置 */
+#if SYS_SUPPORT_OS                                      /* 如果需要支持OS. */
+    reload = sysclk;                                    /* 每秒钟的计数次数 单位为M */
+    reload *= 1000000 / delay_ostickspersec;            /* 根据delay_ostickspersec设定溢出时间,reload为24位
+                                                         * 寄存器,最大值:16777216,在168M下,约合0.09986s左右
+                                                         */
+    g_fac_ms = 1000 / delay_ostickspersec;              /* 代表OS可以延时的最少单位 */
+    SysTick->CTRL |= 1 << 1;                            /* 开启SYSTICK中断 */
+    SysTick->LOAD = reload;                             /* 每1/delay_ostickspersec秒中断一次 */
+    SysTick->CTRL |= 1 << 0;                            /* 开启SYSTICK */
+#endif 
+}
+
+/**
+ * @brief     延时nus
+ * @note      无论是否使用OS, 都是用时钟摘取法来做us延时
+ * @param     nus: 要延时的us数
+ * @note      nus取值范围: 0 ~ (2^32 / fac_us) (fac_us一般等于系统主频, 自行套入计算)
+ * @retval    无
+ */
+void delay_us(uint32_t nus)
+{
+    uint32_t ticks;
+    uint32_t told, tnow, tcnt = 0;
+    uint32_t reload = SysTick->LOAD;        /* LOAD的值 */
+    ticks = nus * g_fac_us;                 /* 需要的节拍数 */
+    
+#if SYS_SUPPORT_OS                          /* 如果需要支持OS */
+    delay_osschedlock();                    /* 锁定 OS 的任务调度器 */
+#endif
+
+    told = SysTick->VAL;                    /* 刚进入时的计数器值 */
+    while (1)
     {
-    #if SYS_SUPPORT_OS                                      /* 如果需要支持OS */
-        uint32_t reload;
-    #endif
-        g_fac_us = sysclk;                                  /* 由于在HAL_Init中已对systick做了配置，所以这里无需重新配置 */
-    #if SYS_SUPPORT_OS                                      /* 如果需要支持OS. */
-        reload = sysclk;                                    /* 每秒钟的计数次数 单位为M */
-        reload *= 1000000 / delay_ostickspersec;            /* 根据delay_ostickspersec设定溢出时间,reload为24位
-                                                             * 寄存器,最大值:16777216,在168M下,约合0.09986s左右
-                                                             */
-        g_fac_ms = 1000 / delay_ostickspersec;              /* 代表OS可以延时的最少单位 */
-        SysTick->CTRL |= 1 << 1;                            /* 开启SYSTICK中断 */
-        SysTick->LOAD = reload;                             /* 每1/delay_ostickspersec秒中断一次 */
-        SysTick->CTRL |= 1 << 0;                            /* 开启SYSTICK */
-    #endif 
+        tnow = SysTick->VAL;
+        if (tnow != told)
+        {
+            if (tnow < told)
+            {
+                tcnt += told - tnow;        /* 这里注意一下SYSTICK是一个递减的计数器就可以了 */
+            }
+            else
+            {
+                tcnt += reload - tnow + told;
+            }
+            told = tnow;
+            if (tcnt >= ticks) 
+            {
+                break;                      /* 时间超过/等于要延迟的时间,则退出 */
+            }
+        }
     }
 
-    
+#if SYS_SUPPORT_OS                          /* 如果需要支持OS */
+    delay_osschedunlock();                  /* 恢复 OS 的任务调度器 */
+#endif 
+
+}
 
 /**
  * @brief     延时nms
@@ -139,53 +200,6 @@ void delay_ms(uint16_t nms)
 #endif
 
     delay_us((uint32_t)(nms * 1000));                   /* 普通方式延时 */
-}
-    
-    
-/**
- * @brief     延时nus
- * @note      无论是否使用OS, 都是用时钟摘取法来做us延时
- * @param     nus: 要延时的us数
- * @note      nus取值范围: 0 ~ (2^32 / fac_us) (fac_us一般等于系统主频, 自行套入计算)
- * @retval    无
- */
-void delay_us(uint32_t nus)
-{
-    uint32_t ticks;
-    uint32_t tlast, tcurr, tcnt = 0;
-    uint32_t reload = SysTick->LOAD;        /* LOAD的值 */
-    ticks = nus * g_fac_us;                 /* 需要的总节拍数 */
-    
-#if SYS_SUPPORT_OS                          /* 如果需要支持OS */
-    delay_osschedlock();                    /* 锁定 OS 的任务调度器 */
-#endif
-
-    tlast = SysTick->VAL;                    /* 刚进入时的计数器值 */
-    while (1)
-    {
-        tcurr = SysTick->VAL;
-        if (tcurr != tlast)
-        {
-            if (tcurr < tlast)
-            {
-                tcnt += tlast - tcurr;        /* 这里注意一下SYSTICK是一个递减的计数器就可以了 */
-            }
-            else
-            {
-                tcnt += reload - tcurr + tlast;
-            }
-            tlast = tcurr;
-            if (tcnt >= ticks) 
-            {
-                break;                      /* 时间超过/等于要延迟的时间,则退出 */
-            }
-        }
-    }
-
-#if SYS_SUPPORT_OS                          /* 如果需要支持OS */
-    delay_osschedunlock();                  /* 恢复 OS 的任务调度器 */
-#endif 
-
 }
 
 /**
