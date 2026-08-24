@@ -411,6 +411,21 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Drivers/BSP</GroupName>
+          <Files>
+            <File>
+              <FileName>key-i.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\KEY\key-i.c</FilePath>
+            </File>
+            <File>
+              <FileName>led-i.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\LED\led-i.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Drivers/SYSTEM</GroupName>
           <Files>
             <File>
