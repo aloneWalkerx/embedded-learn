@@ -423,6 +423,16 @@
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\LED\led-i.c</FilePath>
             </File>
+            <File>
+              <FileName>led-e.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\LED\led-e.c</FilePath>
+            </File>
+            <File>
+              <FileName>key-e.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\KEY\key-e.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

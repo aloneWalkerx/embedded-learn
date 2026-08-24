@@ -21,7 +21,7 @@ void key_i_init()
     //配置模式为输入模式
     gpio_init_struct.Mode = GPIO_MODE_INPUT;
     
-    //配置输入模式为上拉输入
+    //配置输入模式为下拉输入
     gpio_init_struct.Pull = GPIO_PULLDOWN;
     
     //配置速度
@@ -38,7 +38,7 @@ void key_i_init()
     //配置模式为输入模式
     gpio_init_struct.Mode = GPIO_MODE_INPUT;
     
-    //配置输入模式为上拉输入
+    //配置输入模式为下拉输入
     gpio_init_struct.Pull = GPIO_PULLDOWN;
     
     //配置速度
