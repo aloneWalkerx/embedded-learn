@@ -360,3 +360,14 @@ HAL_GPIO_Init(KEY_R_GPIO_PORT, &gpio_init_struct);
 
 
 ## ⑥实验结果
+<img width="4096" height="3072" alt="7a431feeafee81bbed51fd64a9f06a57" src="https://github.com/user-attachments/assets/245af476-ae7a-4f59-bf8e-610a4dd91957" />
+
+<img width="4096" height="3072" alt="605a827b8a68d35eade7999f5e2119e8" src="https://github.com/user-attachments/assets/8a0b4a50-a118-4ef2-86f9-dd994de16782" />
+
+<img width="4096" height="3072" alt="8311b7018346a64f83d6d4a52f3ae74a" src="https://github.com/user-attachments/assets/cab438ab-5586-427b-89ef-55c73b3f88b6" />
+
+<img width="4096" height="3072" alt="ee6dd2283ec6ae20221049aa36cb4978" src="https://github.com/user-attachments/assets/9802b90f-f210-4fdd-8115-c5d9c4117645" />
+
+<img width="4096" height="3072" alt="7c24c326212f896125e03bfdd493440d" src="https://github.com/user-attachments/assets/f2e8cf21-920f-47c6-8735-299847d03a69" />
+
+
