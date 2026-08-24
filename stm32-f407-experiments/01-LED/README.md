@@ -186,16 +186,21 @@ HAL_Delay() 内部循环检查 uwTick 差值
 
 板载实验结果（初始化函数为：led_i_init）
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-08-23-18-56-46-2c3fea90b89f07a2c7e74dac06a208f0.jpg)
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-08-23-18-56-56-098e65555e7eec7c4847408c7500930d.jpg)
+<img width="4096" height="3072" alt="098e65555e7eec7c4847408c7500930d" src="https://github.com/user-attachments/assets/ba5e5059-d353-4103-8c8f-0ff1b1efca51" />
+
+<img width="4096" height="3072" alt="2c3fea90b89f07a2c7e74dac06a208f0" src="https://github.com/user-attachments/assets/4d663d6c-066c-4543-8188-c59e61712ed2" />
+
 
 
 
 外设实验结果（初始化函数为：led_e_init）：
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-08-23-18-57-16-3018a308f79a45cc79aaad44edee0f20.jpg)
+<img width="3072" height="4096" alt="10aa46051daf88ebfa2c96f6bea2e11f" src="https://github.com/user-attachments/assets/ed73faeb-72c5-4348-815a-4937e14bf5a8" />
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-08-23-18-57-33-10aa46051daf88ebfa2c96f6bea2e11f.jpg)
+<img width="3072" height="4096" alt="3018a308f79a45cc79aaad44edee0f20" src="https://github.com/user-attachments/assets/6f66335d-fc12-4c76-8528-8b9079bfe8fb" />
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-08-23-18-57-39-e81e14cae6209d2d288178aa788483cd.jpg)
+<img width="3072" height="4096" alt="e81e14cae6209d2d288178aa788483cd" src="https://github.com/user-attachments/assets/cd407bd1-7721-4033-9b3e-65feef3d3792" />
+
+
+
