@@ -5,6 +5,10 @@
 #include "./BSP/KEY/key-i.h"
 #include "./BSP/KEY/key-e.h"
 #include "./BSP/LED/led-e.h"
+#include "./BSP/KEY/key-i-e.h"
+
+
+
 int main(void)
 {   
     uint8_t key;
@@ -19,28 +23,65 @@ int main(void)
     while (1)
     {
         
+               
        
-        //外设按键翻转外设LED       
-        key = key_e_scan(0);              /* 扫描外设按键 */
+        //板载按键翻转LED与外设按键翻转外设LED二合一
+        
+        key = key_i_e_scan(0);              /* 扫描外设按键 */
         
         switch (key)
         {
-            case KEY_R_PRESS:             /* 外设KEY_R按键被按下 */
+            
+            case I_E_WKUP_PRESS:        /* 板载I_E_WKUP按键被按下 */
+            {
+                LED0_TOGGLE();          /* 翻转板载LED0状态 */
+                break;
+            }
+            case I_E_KEY0_PRESS:        /* 板载I_E_KEY0按键被按下 */
+            {
+                LED1_TOGGLE();          /* 翻转板载LED1状态 */
+                break;
+            }
+            case I_E_KEY_R_PRESS:       /* 外设I_E_KEY_R按键被按下 */
             {
                 LED_R_TOGGLE();          /* 翻转外设LED_R状态 */
                 break;
             }
-            case KEY_Y_PRESS:             /* 外设KEY_Y按键被按下 */
+            case I_E_KEY_Y_PRESS:        /* 外设I_E_KEY_Y按键被按下 */
             {
-                LED_Y_TOGGLE();          /* 翻转外设LED_Y状态 */
+                LED_Y_TOGGLE();          /* 翻转外设I_E_LED_Y状态 */
                 break;
             }
-            case KEY_G_PRESS:             /* 外设KEY_G按键被按下 */
+            case I_E_KEY_G_PRESS:        /* 外设I_E_KEY_G按键被按下 */
             {
                 LED_G_TOGGLE();          /* 翻转外设LED_G状态 */
                 break;
             }
         }
+        
+        
+//       
+//        //外设按键翻转外设LED       
+//        key = key_e_scan(0);              /* 扫描外设按键 */
+//        
+//        switch (key)
+//        {
+//            case KEY_R_PRESS:             /* 外设KEY_R按键被按下 */
+//            {
+//                LED_R_TOGGLE();          /* 翻转外设LED_R状态 */
+//                break;
+//            }
+//            case KEY_Y_PRESS:             /* 外设KEY_Y按键被按下 */
+//            {
+//                LED_Y_TOGGLE();          /* 翻转外设LED_Y状态 */
+//                break;
+//            }
+//            case KEY_G_PRESS:             /* 外设KEY_G按键被按下 */
+//            {
+//                LED_G_TOGGLE();          /* 翻转外设LED_G状态 */
+//                break;
+//            }
+//        }
         
         
            //板载按键翻转板载LED

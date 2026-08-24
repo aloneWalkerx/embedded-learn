@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\KEY\key-e.c</FilePath>
             </File>
+            <File>
+              <FileName>key-i-e.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\KEY\key-i-e.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

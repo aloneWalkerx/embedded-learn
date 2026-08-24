@@ -12,14 +12,14 @@ void key_e_init()
     KEY_R_GPIO_CLK_ENABLE();
     
     //使能KEY_Y对应引脚类型的时钟（PB11）
-    KEY_Y_GPIO_CLK_ENABLE();
+   // KEY_Y_GPIO_CLK_ENABLE();  //注释掉，，重复，一样的引脚类型
     
     //使能KEY_G对应引脚类型的时钟（PB12）
-    KEY_G_GPIO_CLK_ENABLE();
+   // KEY_G_GPIO_CLK_ENABLE();//注释掉，，重复，一样的引脚类型
     
     //3，配置KEY_R引脚
     //配置引脚号
-    gpio_init_struct.Pin = KEY_R_GPIO_PIN;
+    gpio_init_struct.Pin = KEY_R_GPIO_PIN | KEY_Y_GPIO_PIN | KEY_G_GPIO_PIN;
     
     //配置模式为输入模式
     gpio_init_struct.Mode = GPIO_MODE_INPUT;
@@ -33,39 +33,39 @@ void key_e_init()
     //根据参数初始化WKUP引脚
     HAL_GPIO_Init(KEY_R_GPIO_PORT, &gpio_init_struct);
     
-    
-    //4，配置KEY_Y引脚
-    //配置引脚号
-    gpio_init_struct.Pin = KEY_Y_GPIO_PIN;
-    
-    //配置模式为输入模式
-    gpio_init_struct.Mode = GPIO_MODE_INPUT;
-    
-    //配置输入模式为上拉输入
-    gpio_init_struct.Pull = GPIO_PULLUP;
-    
-    //配置速度
-    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
-    
-    //根据参数初始化WKUP引脚
-    HAL_GPIO_Init(KEY_Y_GPIO_PORT, &gpio_init_struct);
-    
-    
-    //5，配置KEY_G引脚
-    //配置引脚号
-    gpio_init_struct.Pin = KEY_G_GPIO_PIN;
-    
-    //配置模式为输入模式
-    gpio_init_struct.Mode = GPIO_MODE_INPUT;
-    
-    //配置输入模式为上拉输入
-    gpio_init_struct.Pull = GPIO_PULLUP;
-    
-    //配置速度
-    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
-    
-    //根据参数初始化WKUP引脚
-    HAL_GPIO_Init(KEY_G_GPIO_PORT, &gpio_init_struct);
+//    以下注释掉，重复，一样的引脚类型，以这样的方式实现即可：KEY_R_GPIO_PIN | KEY_Y_GPIO_PIN | KEY_G_GPIO_PIN
+//    //4，配置KEY_Y引脚
+//    //配置引脚号
+//    gpio_init_struct.Pin = KEY_Y_GPIO_PIN;
+//    
+//    //配置模式为输入模式
+//    gpio_init_struct.Mode = GPIO_MODE_INPUT;
+//    
+//    //配置输入模式为上拉输入
+//    gpio_init_struct.Pull = GPIO_PULLUP;
+//    
+//    //配置速度
+//    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
+//    
+//    //根据参数初始化WKUP引脚
+//    HAL_GPIO_Init(KEY_Y_GPIO_PORT, &gpio_init_struct);
+//    
+//    
+//    //5，配置KEY_G引脚
+//    //配置引脚号
+//    gpio_init_struct.Pin = KEY_G_GPIO_PIN;
+//    
+//    //配置模式为输入模式
+//    gpio_init_struct.Mode = GPIO_MODE_INPUT;
+//    
+//    //配置输入模式为上拉输入
+//    gpio_init_struct.Pull = GPIO_PULLUP;
+//    
+//    //配置速度
+//    gpio_init_struct.Speed = GPIO_SPEED_FREQ_LOW;
+//    
+//    //根据参数初始化WKUP引脚
+//    HAL_GPIO_Init(KEY_G_GPIO_PORT, &gpio_init_struct);
     
 }
 
