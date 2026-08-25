@@ -62,9 +62,20 @@ void exti_e_init(void)
 void KEY_R_EXT_IRQHandler(void)
 {   
     //中断服务函数
-    HAL_GPIO_EXTI_IRQHandler(KEY_R_EXT_GPIO_PIN);
-    HAL_GPIO_EXTI_IRQHandler(KEY_Y_EXT_GPIO_PIN);
-    HAL_GPIO_EXTI_IRQHandler(KEY_G_EXT_GPIO_PIN);
+//    HAL_GPIO_EXTI_IRQHandler(KEY_R_EXT_GPIO_PIN);
+//    HAL_GPIO_EXTI_IRQHandler(KEY_Y_EXT_GPIO_PIN);
+//    HAL_GPIO_EXTI_IRQHandler(KEY_G_EXT_GPIO_PIN);
+
+    if (__HAL_GPIO_EXTI_GET_IT(KEY_R_EXT_GPIO_PIN) != RESET) {
+        HAL_GPIO_EXTI_IRQHandler(KEY_R_EXT_GPIO_PIN);
+    }
+    if (__HAL_GPIO_EXTI_GET_IT(KEY_Y_EXT_GPIO_PIN) != RESET) {
+        HAL_GPIO_EXTI_IRQHandler(KEY_Y_EXT_GPIO_PIN);
+    }
+    if (__HAL_GPIO_EXTI_GET_IT(KEY_G_EXT_GPIO_PIN) != RESET) {
+        HAL_GPIO_EXTI_IRQHandler(KEY_G_EXT_GPIO_PIN);
+    }
+
 }
 
 
