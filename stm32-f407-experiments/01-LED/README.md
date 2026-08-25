@@ -186,6 +186,8 @@ HAL_Delay() 内部循环检查 uwTick 差值
 
 板载实验结果（初始化函数为：led_i_init）
 
+https://github.com/user-attachments/assets/d2558ad7-1a26-40bb-a7ea-3f065a9bff8a
+
 
 <img width="4096" height="3072" alt="098e65555e7eec7c4847408c7500930d" src="https://github.com/user-attachments/assets/ba5e5059-d353-4103-8c8f-0ff1b1efca51" />
 
@@ -201,6 +203,14 @@ HAL_Delay() 内部循环检查 uwTick 差值
 <img width="3072" height="4096" alt="3018a308f79a45cc79aaad44edee0f20" src="https://github.com/user-attachments/assets/6f66335d-fc12-4c76-8528-8b9079bfe8fb" />
 
 <img width="3072" height="4096" alt="e81e14cae6209d2d288178aa788483cd" src="https://github.com/user-attachments/assets/cd407bd1-7721-4033-9b3e-65feef3d3792" />
+
+
+
+
+
+
+
+
 
 
 
