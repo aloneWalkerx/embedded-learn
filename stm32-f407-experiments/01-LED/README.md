@@ -1,6 +1,6 @@
 # 实验1 :跑马灯
 
-本实验通过STM32F407ZGT6板载的LED0（PF9）,LED1(PF10)以及外设红，黄，绿LED灯为实验对象
+本实验通过STM32F407ZGT6板载的LED0（PF9）,LED1(PF10)以及外设红，黄，绿LED灯为实验对象（====末尾是实验结果视频====）
 
 ### ① 时钟树
 
@@ -182,27 +182,13 @@ HAL_Delay() 内部循环检查 uwTick 差值
 
 
 
-## ⑦实验结果
+## ⑦实验结果视频
 
-板载实验结果（初始化函数为：led_i_init）
-
-https://github.com/user-attachments/assets/d2558ad7-1a26-40bb-a7ea-3f065a9bff8a
-
-
-<img width="4096" height="3072" alt="098e65555e7eec7c4847408c7500930d" src="https://github.com/user-attachments/assets/ba5e5059-d353-4103-8c8f-0ff1b1efca51" />
-
-<img width="4096" height="3072" alt="2c3fea90b89f07a2c7e74dac06a208f0" src="https://github.com/user-attachments/assets/4d663d6c-066c-4543-8188-c59e61712ed2" />
+https://github.com/user-attachments/assets/b1f57922-2b81-467d-bf4a-64658b0ad503
 
 
 
 
-外设实验结果（初始化函数为：led_e_init）：
-
-<img width="3072" height="4096" alt="10aa46051daf88ebfa2c96f6bea2e11f" src="https://github.com/user-attachments/assets/ed73faeb-72c5-4348-815a-4937e14bf5a8" />
-
-<img width="3072" height="4096" alt="3018a308f79a45cc79aaad44edee0f20" src="https://github.com/user-attachments/assets/6f66335d-fc12-4c76-8528-8b9079bfe8fb" />
-
-<img width="3072" height="4096" alt="e81e14cae6209d2d288178aa788483cd" src="https://github.com/user-attachments/assets/cd407bd1-7721-4033-9b3e-65feef3d3792" />
 
 
 
