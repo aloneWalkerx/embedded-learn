@@ -1,7 +1,6 @@
 #ifndef  EXTI_I_H
 #define  EXTI_I_H
 
-#include "./SYSTEM/sys/sys.h"
 
 //WKUP引脚类型
 #define WKUP_EXT_GPIO_PORT             GPIOA
@@ -33,7 +32,7 @@
 //KEY0中断处理函数
 #define KEY0_EXT_IRQHandler            EXTI4_IRQHandler
 
-//初始化板载LED中断
+//初始化板载按键控制LED中断
 void exti_i_init(void);
 
 #endif
