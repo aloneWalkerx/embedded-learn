@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\LED\led-e.c</FilePath>
             </File>
+            <File>
+              <FileName>exti-i-e.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\EXTI\exti-i-e.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
