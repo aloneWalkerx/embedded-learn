@@ -299,6 +299,7 @@ HAL_UART_Receive_IT(&g_uart_i_handle, g_usart_i_rx_buffer, 1);
 
 
 ### ⑥实验结果：
+<img width="2546" height="722" alt="image" src="https://github.com/user-attachments/assets/70da0d9a-8822-470d-8038-b549e483af2b" />
 
 
 
