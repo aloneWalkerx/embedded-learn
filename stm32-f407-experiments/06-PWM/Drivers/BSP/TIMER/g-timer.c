@@ -114,7 +114,7 @@ void gtim_timx_pwm_chy_init(uint16_t arr, uint16_t psc)
     //输出比较模式-PWM模式1
     timx_oc_pwm_struct.OCMode = TIM_OCMODE_PWM1;
     
-    //占空比
+    //设定初始占空比为 50%
     timx_oc_pwm_struct.Pulse = (arr + 1) >> 1;
     
     //有效电平-高电平
