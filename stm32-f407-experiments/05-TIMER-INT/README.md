@@ -1,7 +1,3 @@
-
-
-https://github.com/user-attachments/assets/e9ce6d57-0a1f-41c7-9599-0510d7765d81
-
 # 实验 5：基本定时器中断
 
 本实验通过STM32F407ZGT6板载的TIM6基本定时器控制LED1每隔一秒闪烁一次（====底部有实验结果视频====）
