@@ -196,3 +196,8 @@ PWM 输出**不需要中断**。波形生成由硬件完全独立完成：
 
 
 ### ⑤实验结果视频
+https://github.com/user-attachments/assets/60914474-7a6d-4112-98a9-89576ac50986
+
+
+
+
