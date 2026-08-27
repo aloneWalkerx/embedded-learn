@@ -5967,7 +5967,7 @@ HAL_StatusTypeDef HAL_TIM_RegisterCallback(TIM_HandleTypeDef *htim, HAL_TIM_Call
   {
     switch (CallbackID)
     {
-      case HAL_TIM_BASE_MSPINIT_CB_ID :
+       case HAL_TIM_BASE_MSPINIT_CB_ID :
         htim->Base_MspInitCallback         = pCallback;
         break;
 
