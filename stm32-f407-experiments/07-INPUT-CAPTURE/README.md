@@ -340,6 +340,6 @@ HAL_TIM_IRQHandler 内部：
 
 
 
-### ⑥
+### ⑥实验结果
+<img width="873" height="618" alt="image" src="https://github.com/user-attachments/assets/933c2dd0-386c-454a-90c6-f034e1d2ae3d" />
 
-实验结果
