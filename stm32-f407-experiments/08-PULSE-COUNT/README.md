@@ -294,3 +294,4 @@ tim_slave_config_struct.TriggerPolarity = TIM_TRIGGERPOLARITY_FALLING;
 
 
 ### ⑥实验结果
+<img width="876" height="594" alt="image" src="https://github.com/user-attachments/assets/1be7dbb0-ddfe-47c1-a8c0-7fd08d36d1d7" />
