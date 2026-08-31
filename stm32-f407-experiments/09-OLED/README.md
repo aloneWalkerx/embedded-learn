@@ -277,3 +277,13 @@ void IIC_Start(void)
 
 
 ### ⑥实验结果
+https://github.com/user-attachments/assets/1b9196e5-8121-4572-a6c5-34991fe018ef
+
+
+
+
+
+
+
+
+
