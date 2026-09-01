@@ -258,7 +258,8 @@ void lcd_show_xnum(uint16_t x, uint16_t y, uint32_t num, uint8_t len, uint8_t si
 //显示字符串
 void lcd_show_string(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t size, char *p, uint16_t color);   
 
-
+// 显示中文字符串（顺序索引模式）
+void lcd_show_chinese(uint16_t x, uint16_t y, char *str, uint8_t size, uint16_t color);
 
 
 #endif

@@ -26,6 +26,15 @@ int main(void)
     lcd_show_string(10, 50, 240, 24, 24, (char *)lcd_id, BLUE);
     delay_ms(2000);
 
+     
+     // 在 main 函数的全功能测试段中，加入：
+    lcd_clear(WHITE);
+    lcd_show_chinese(10, 10, "你好呀，小黑", 16, RED);
+    lcd_show_chinese(10, 40, "你好呀，小黑", 24, BLUE);
+    lcd_show_chinese(10, 80, "你好呀，小黑", 32, GREEN);
+    lcd_show_string(10, 130, 240, 16, 24, "Chinese Test OK", RED);
+    delay_ms(3000);
+        
     /* ② 测试画点、画线、矩形、圆、填充圆 */
     lcd_clear(BLACK);
     // 画点：在 (100,100) 画一个红点

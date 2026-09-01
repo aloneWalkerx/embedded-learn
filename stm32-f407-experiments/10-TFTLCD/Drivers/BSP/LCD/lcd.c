@@ -1321,5 +1321,86 @@ void HAL_SRAM_MspInit(SRAM_HandleTypeDef *hsram)
 }
 
 
-
+/**
+ * @brief   在指定位置显示一个中文字符（顺序索引模式）
+ * @param   x: 起始X坐标
+ * * @param   y: 起始Y坐标
+ * @param   str: 中文字符串（字库顺序必须与字符串一致）
+ * @param   size: 字体大小（16/24/32）
+ * @param   color: 显示颜色（RGB565）
+ * @retval  无
+ * @note    字库顺序必须与字符串中的字符顺序完全对应
+ */
+void lcd_show_chinese(uint16_t x, uint16_t y, char *str, uint8_t size, uint16_t color)
+{
+    uint8_t j, k, tmp;
+    uint16_t num;
+    uint8_t char_index = 0;
+    uint16_t x0 = x;
+   
+    
+    while (*str) {
+        if (size == 16) {
+            num = sizeof(cfont16) / sizeof(typFNT_GB16);
+            if (char_index < num) {
+                // 16x16 点阵，每字 32 字节，每行 2 字节（16位），共 16 行
+                for (j = 0; j < 32; j++) {
+                    tmp = cfont16[char_index].Msk[j];
+                    // 一字节对应 8 个像素点
+                    for (k = 0; k < 8; k++) {
+                        if (tmp & (0x80 >> k)) {
+                            // 画点
+                            lcd_draw_point(x + (j % 2) * 8 + k, y + j / 2, color);
+                        }
+                        // 注意：这里没有画背景，因为 TFT 通常不需要背景色，或者使用清屏颜色
+                        // 如果希望背景色，可以在 else 中画背景色，但会影响速度
+                    }
+                }
+            }
+            x += size; // 下一个汉字横向偏移 16 像素
+            char_index++;
+        } else if (size == 24) {
+            num = sizeof(cfont24) / sizeof(typFNT_GB24);
+            if (char_index < num) {
+                // 24x24 点阵，每字 72 字节，每行 3 字节（24位），共 24 行
+                for (j = 0; j < 72; j++) {
+                    tmp = cfont24[char_index].Msk[j];
+                    for (k = 0; k < 8; k++) {
+                        if (tmp & (0x80 >> k)) {
+                            lcd_draw_point(x + (j % 3) * 8 + k, y + j / 3, color);
+                        }
+                    }
+                }
+            }
+            x += size;
+            char_index++;
+        } else if (size == 32) {
+            num = sizeof(cfont32) / sizeof(typFNT_GB32);
+            if (char_index < num) {
+                // 32x32 点阵，每字 128 字节，每行 4 字节（32位），共 32 行
+                for (j = 0; j < 128; j++) {
+                    tmp = cfont32[char_index].Msk[j];
+                    for (k = 0; k < 8; k++) {
+                        if (tmp & (0x80 >> k)) {
+                            lcd_draw_point(x + (j % 4) * 8 + k, y + j / 4, color);
+                        }
+                    }
+                }
+            }
+            x += size;
+            char_index++;
+        }
+        
+        str += 2;  // 跳过两个字节（GBK编码）
+        // 如果超出水平边界，换行（简单处理）
+        if (x > lcddev.width - size) {
+            x = x0;
+            y += size;
+        }
+        // 如果超出垂直边界，停止显示
+        if (y > lcddev.height - size) {
+            break;
+        }
+    }
+}
 
