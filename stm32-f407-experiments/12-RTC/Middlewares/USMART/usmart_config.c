@@ -9,6 +9,7 @@
 #include "./SYSTEM/sys/sys.h"
 #include "./SYSTEM/delay/delay.h"
 #include "./BSP/LCD/lcd.h"
+#include "./BSP/RTC/rtc.h"
 
 extern void led_set(uint8_t sta);
 extern void test_fun(void(*ledset)(uint8_t), uint8_t sta);
@@ -38,10 +39,12 @@ struct _m_usmart_nametab usmart_nametab[] =
     (void *)lcd_read_point, "uint16_t lcd_read_point(uint16_t x, uint16_t y)",
     (void *)lcd_display_dir, "void lcd_display_dir(uint8_t dir)",
 
-    (void *)led_set, "void led_set(uint8_t sta)",
-    (void *)test_fun, "void test_fun(void(*ledset)(uint8_t), uint8_t sta)",
-    (void *)lcd_clear,"void lcd_clear(uint16_t color)",
-    (void *)lcd_show_chinese, "void lcd_show_chinese(uint16_t x, uint16_t y, char *str, uint8_t size, uint16_t color)"
+    (void *)lcd_clear, "void lcd_clear(uint16_t color)",
+    (void *)lcd_show_chinese, "void lcd_show_chinese(uint16_t x, uint16_t y, char *str, uint8_t size, uint16_t color)",
+        
+    (void *)rtc_set_time, "uint8_t rtc_set_time(uint8_t hour, uint8_t minute, uint8_t second, uint8_t ampm)",
+    (void *)rtc_set_alarm, "void rtc_set_alarm(uint8_t week, uint8_t hour, uint8_t minute, uint8_t second)",    
+    (void *)rtc_set_date, "uint8_t rtc_set_date(uint8_t year, uint8_t month, uint8_t date, uint8_t week)"
 };
 
 /******************************************************************************************/
