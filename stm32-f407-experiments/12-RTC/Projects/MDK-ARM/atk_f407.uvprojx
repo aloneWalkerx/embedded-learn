@@ -428,6 +428,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\RTC\rtc.c</FilePath>
             </File>
+            <File>
+              <FileName>buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\BUZZER\buzzer.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

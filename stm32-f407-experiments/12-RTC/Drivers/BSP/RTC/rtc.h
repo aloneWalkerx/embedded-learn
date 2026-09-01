@@ -33,5 +33,7 @@ void rtc_set_alarm(uint8_t week, uint8_t hour, uint8_t minute, uint8_t second);
 //设置RTC周期性唤醒中断
 void rtc_set_wakeup(uint8_t clock, uint8_t count);
 
+// 获取RTC闹钟时间信息
+void rtc_get_alarm(uint8_t *hour, uint8_t *minute, uint8_t *second, uint8_t *week);
 
 #endif

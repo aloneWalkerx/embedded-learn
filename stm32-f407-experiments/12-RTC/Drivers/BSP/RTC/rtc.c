@@ -1,7 +1,13 @@
 #include "./BSP/RTC/rtc.h"      // 包含 RTC 模块的头文件（函数声明、结构体定义等）
 #include "./BSP/LED/led-i.h"    // 包含 LED 驱动头文件（用于唤醒中断中翻转 LED1）
 #include <stdio.h>              // 包含标准 I/O 库（用于 printf 打印调试信息）
+#include "./BSP/BUZZER/buzzer.h"
+#include "./SYSTEM/delay/delay.h"
 
+
+volatile uint8_t g_alarm_triggered = 0;  // 闹钟触发标志
+volatile uint8_t g_buzzer_count = 0;     // 蜂鸣器响动剩余次数
+volatile uint8_t g_buzzer_state = 0;     // 0=关闭，1=响
 /* ====================================================================
    全局变量定义
    ==================================================================== */
@@ -358,6 +364,27 @@ void rtc_set_alarm(uint8_t week, uint8_t hour, uint8_t minute, uint8_t second)
     /* --- 步骤 3：使能闹钟中断并写入硬件 --- */
     HAL_RTC_SetAlarm_IT(&g_rtc_handle, &rtc_alarm_struct, RTC_FORMAT_BIN);
 }
+/**
+ * @brief   获取当前设置的闹钟A时间
+ * @param   hour:   指向小时变量的指针
+ * @param   minute: 指向分钟变量的指针
+ * @param   second: 指向秒变量的指针
+ * @param   week:   指向星期变量的指针（1~7，0表示每天）
+ * @retval  无
+ */
+void rtc_get_alarm(uint8_t *hour, uint8_t *minute, uint8_t *second, uint8_t *week)
+{
+    RTC_AlarmTypeDef rtc_alarm_struct = {0};
+    
+    /* 从硬件寄存器中读取闹钟A的配置 */
+    HAL_RTC_GetAlarm(&g_rtc_handle, &rtc_alarm_struct, RTC_ALARM_A, RTC_FORMAT_BIN);
+    
+    /* 通过指针返回给调用者 */
+    *hour = rtc_alarm_struct.AlarmTime.Hours;
+    *minute = rtc_alarm_struct.AlarmTime.Minutes;
+    *second = rtc_alarm_struct.AlarmTime.Seconds;
+    *week = rtc_alarm_struct.AlarmDateWeekDay;   // 星期几（1~7），0 表示每天
+}
 
 /* ====================================================================
    ? HAL 库闹钟 A 中断回调（用户代码在此执行）
@@ -371,7 +398,9 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 {
     /* ★ 闹钟触发时执行：打印提示信息到串口 */
     printf("Alarm A!\r\n");
-    
+    g_alarm_triggered = 1;       // 设置标志
+    g_buzzer_count = 10;         // 响 5 秒（10 次 × 500ms）
+    g_buzzer_state = 1;          // 开始响
     /* 可以在这里添加其他动作，如：闪烁 LED、播放声音等 */
 }
 
@@ -432,7 +461,8 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 {
     /* ★ 唤醒中断触发时执行：翻转 LED1 状态 */
     LED1_TOGGLE();
-    
+   
+   
     /* 可以在这里添加其他周期性任务，如：扫描按键、更新传感器数据等 */
 }
 

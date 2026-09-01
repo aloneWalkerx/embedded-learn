@@ -10,6 +10,7 @@
 #include "./SYSTEM/delay/delay.h"
 #include "./BSP/LCD/lcd.h"
 #include "./BSP/RTC/rtc.h"
+#include "./BSP/RTC/rtc.h" 
 
 extern void led_set(uint8_t sta);
 extern void test_fun(void(*ledset)(uint8_t), uint8_t sta);
@@ -44,7 +45,8 @@ struct _m_usmart_nametab usmart_nametab[] =
         
     (void *)rtc_set_time, "uint8_t rtc_set_time(uint8_t hour, uint8_t minute, uint8_t second, uint8_t ampm)",
     (void *)rtc_set_alarm, "void rtc_set_alarm(uint8_t week, uint8_t hour, uint8_t minute, uint8_t second)",    
-    (void *)rtc_set_date, "uint8_t rtc_set_date(uint8_t year, uint8_t month, uint8_t date, uint8_t week)"
+    (void *)rtc_set_date, "uint8_t rtc_set_date(uint8_t year, uint8_t month, uint8_t date, uint8_t week)",
+    (void *)rtc_set_alarm,"rtc_set_alarm(uint8_t week, uint8_t hour, uint8_t minute, uint8_t second)"
 };
 
 /******************************************************************************************/
