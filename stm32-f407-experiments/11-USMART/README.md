@@ -176,5 +176,6 @@
 
 
 ### ⑤实验结果
+<img width="2358" height="1304" alt="image" src="https://github.com/user-attachments/assets/681dec51-2f35-4ac6-a9fe-071aaf8a4cb1" />
 
-![](C:/Users/46973/AppData/Roaming/marktext/images/2026-09-01-16-02-18-image.png)
+
