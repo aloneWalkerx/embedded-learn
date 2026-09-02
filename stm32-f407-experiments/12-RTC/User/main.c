@@ -58,11 +58,12 @@ int main(void)
             lcd_show_string(30, 150, 210, 16, 24, tbuf, RED);
             
             //获取周
-            sprintf(tbuf, "Week:%d", week);
+            sprintf(tbuf, "Week:%s", week_str[week]);
             lcd_show_string(30, 190, 210, 16, 24, tbuf, BLACK);
             
             //获取闹钟时间
             rtc_get_alarm(&alarm_hour,&alarm_minute,&alarm_second,&alarm_week);
+          
             sprintf(tbuf, "Alarm:%02d:%02d:%02d %s", alarm_hour, alarm_minute, alarm_second, week_str[alarm_week]);
             lcd_show_string(20, 230, 210, 16, 24, tbuf, RED);
             
