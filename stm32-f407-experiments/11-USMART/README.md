@@ -1,6 +1,6 @@
 # 实验 11：USMART调试
 
-本实验通过 STM32F407ZGT6 的 **FSMC 外设**（Flexible Static Memory Controller），串口助手，利用 **8080 并行接口** 驱动 2.8 寸 TFTLCD 彩屏（驱动芯片 **ST7789**），通过USMART测试TFTLCD的彩色文字、图形、数字、中文等的显示功能。
+本实验通过 STM32F407ZGT6 的 **FSMC 外设**（Flexible Static Memory Controller），串口助手，利用 **8080 并行接口** 驱动 2.8 寸 TFTLCD 彩屏（驱动芯片 **ST7789**），通过USMART测试TFTLCD的彩色文字、图形、数字、中文等的显示功能（====底部有实验结果====）。
 
 ### ① 时钟树
 
