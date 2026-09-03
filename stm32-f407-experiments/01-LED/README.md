@@ -6,30 +6,30 @@
 
 **基于 `sys_stm32_clock_init(336, 8, 2, 7)` 的实际配置：**
 
-text
-
+```
 ┌─────────────────────────────────────────────────────────────────┐
-│  外部晶振 HSE = 8MHz                                           │
-│      │                                                         │
-│      ▼                                                         │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │              PLL 配置 (RCC->PLLCFGR)                    │   │
-│  │  HSE/8 = 1MHz  →  ×336 = 336MHz  →  /2 = 168MHz       │   │
-│  │  (pllm=8)         (plln=336)        (pllp=2)           │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│      │                                                         │
-│      ▼                                                         │
-│  SYSCLK = 168MHz                                               │
-│      │                                                         │
-│      ├── AHB 分频 HPRE=1 → HCLK = 168MHz                      │
-│      │       │                                                 │
-│      │       ├── APB1 分频 PPRE1=4 → PCLK1 = 42MHz            │
-│      │       └── APB2 分频 PPRE2=2 → PCLK2 = 84MHz            │
-│      │                                                         │
-│      └── GPIOF / GPIOx 挂载在 AHB1 总线                       │
-│          → 时钟由 RCC->AHB1ENR 控制                            │
-│          → __HAL_RCC_GPIOx_CLK_ENABLE() 开启                   │
+│ 外部晶振 HSE = 8MHz │
+│ │ │
+│ ▼ │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ PLL 配置 (RCC->PLLCFGR) │ │
+│ │ HSE/8 = 1MHz → ×336 = 336MHz → /2 = 168MHz │ │
+│ │ (pllm=8) (plln=336) (pllp=2) │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │ │
+│ ▼ │
+│ SYSCLK = 168MHz │
+│ │ │
+│ ├── AHB 分频 HPRE=1 → HCLK = 168MHz │
+│ │ │ │
+│ │ ├── APB1 分频 PPRE1=4 → PCLK1 = 42MHz │
+│ │ └── APB2 分频 PPRE2=2 → PCLK2 = 84MHz │
+│ │ │
+│ └── GPIOF / GPIOx 挂载在 AHB1 总线 │
+│ → 时钟由 RCC->AHB1ENR 控制 │
+│ → __HAL_RCC_GPIOx_CLK_ENABLE() 开启 │
 └─────────────────────────────────────────────────────────────────┘
+```
 
 **关键代码对应：**
 
@@ -82,44 +82,46 @@ text
 
 **从 `main()` 到物理 LED 发光的完整路径：**
 
-text
-
+```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ main.c (App 层)                                                       │
-│                                                                       │
-│  HAL_Init()                                                           │
-│      ├── 配置 Flash 预取 & 缓存                                       │
-│      ├── 初始化 SysTick（1ms 时基）                                   │
-│      └── 设置 NVIC 优先级分组（4 位抢占）                             │
-│                                                                       │
-│  sys_stm32_clock_init(336,8,2,7)                                     │
-│      └── HAL_RCC_OscConfig() → HAL_RCC_ClockConfig()                 │
-│          → 操作 RCC/PWR/FLASH 寄存器 → SYSCLK=168MHz                 │
-│                                                                       │
-│  delay_init(168)                                                      │
-│      └── SysTick_Config(168000000/1000) → 每 1ms 中断一次            │
-│                                                                       │
-│  usart_init(115200) → 串口初始化（调试用）                            │
-│                                                                       │
-│  led_i_init() → BSP 层：板载 LED (PF9, PF10)                         │
-│      ├── __HAL_RCC_GPIOF_CLK_ENABLE() → 开启 GPIOF 时钟              │
-│      ├── HAL_GPIO_Init(GPIOF, &gpio_init_struct) → 配置 MODER/OTYPER/OSPEEDR/PUPDR
-│      └── LED0(1); LED1(1); → BSRR 置位 → 高电平 → 默认熄灭           │
-│                                                                       │
-│  led_e_init() → BSP 层：扩展板 RGB (LEDR/LEDY/LEDG)                  │
-│      ├── 开启对应端口时钟                                            │
-│      ├── HAL_GPIO_Init() ×3 → 配置三个引脚                          │
-│      └── LEDR(0); LEDY(0); LEDG(0); → 低电平 → 默认点亮？           │
-│          ⚠️ 注意：这里和板载 LED 刚好相反！                           │
-│                                                                       │
-│  while(1)                                                             │
-│      ├── led_0_on() → HAL_GPIO_WritePin(..., RESET) → BSRR 复位     │
-│      ├── led_R_on() → HAL_GPIO_WritePin(..., SET) → BSRR 置位       │
-│      ├── delay_ms(500) → HAL_Delay() → SysTick 中断计数             │
-│      ├── led_0_off() → BSRR 置位                                     │
-│      ├── led_R_off() → BSRR 复位                                     │
-│      └── ...                                                         │
+│ main.c (App 层) │
+│ │
+│ HAL_Init() │
+│ ├── 配置 Flash 预取 & 缓存 │
+│ ├── 初始化 SysTick（1ms 时基） │
+│ └── 设置 NVIC 优先级分组（4 位抢占） │
+│ │
+│ sys_stm32_clock_init(336,8,2,7) │
+│ └── HAL_RCC_OscConfig() → HAL_RCC_ClockConfig() │
+│ → 操作 RCC/PWR/FLASH 寄存器 → SYSCLK=168MHz │
+│ │
+│ delay_init(168) │
+│ └── SysTick_Config(168000000/1000) → 每 1ms 中断一次 │
+│ │
+│ usart_init(115200) → 串口初始化（调试用） │
+│ │
+│ led_i_init() → BSP 层：板载 LED (PF9, PF10) │
+│ ├── __HAL_RCC_GPIOF_CLK_ENABLE() → 开启 GPIOF 时钟 │
+│ ├── HAL_GPIO_Init(GPIOF, &gpio_init_struct) → 配置 MODER/OTYPER/OSPEEDR/PUPDR
+│ └── LED0(1); LED1(1); → BSRR 置位 → 高电平 → 默认熄灭 │
+│ │
+│ led_e_init() → BSP 层：扩展板 RGB (LEDR/LEDY/LEDG) │
+│ ├── 开启对应端口时钟 │
+│ ├── HAL_GPIO_Init() ×3 → 配置三个引脚 │
+│ └── LEDR(0); LEDY(0); LEDG(0); → 低电平 → 默认点亮？ │
+│ ⚠️ 注意：这里和板载 LED 刚好相反！ │
+│ │
+│ while(1) │
+│ ├── led_0_on() → HAL_GPIO_WritePin(..., RESET) → BSRR 复位 │
+│ ├── led_R_on() → HAL_GPIO_WritePin(..., SET) → BSRR 置位 │
+│ ├── delay_ms(500) → HAL_Delay() → SysTick 中断计数 │
+│ ├── led_0_off() → BSRR 置位 │
+│ ├── led_R_off() → BSRR 复位 │
+│ └── ... │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+
+
 
 **💡板载 LED 和扩展板 RGB 的电平逻辑不同！**
 
@@ -129,8 +131,6 @@ text
 | 外设 LEDR       | `led_R_on()` | `GPIO_PIN_SET` (1)   | `led_R_off()` | `GPIO_PIN_RESET` (0) |
 
 板载 LED 是低电平点亮（共阳极），外设 RGB 是高电平点亮（共阴极）
-
-
 
 ### ④ 中断/DMA 机制
 
@@ -152,10 +152,6 @@ HAL_Delay() 内部循环检查 uwTick 差值
 - 未使用 GPIO 外部中断（EXTI），因为跑马灯只有输出。
 
 - 未使用 DMA，GPIO 输出由 CPU 直接写寄存器，不涉及大数据量搬运。
-
-
-
-
 
 ### ⑤ 改参实验
 
@@ -180,23 +176,6 @@ HAL_Delay() 内部循环检查 uwTick 差值
 | 3   | **板载 LED 和 RGB LED 电平逻辑相反** | `led_0_on()` 用 `RESET`，`led_R_on()` 用 `SET`                          | 板载 LED 共阳极（低电平亮），RGB LED 共阴极（高电平亮）                          | 已用函数封装完美处理了！`main.c` 不需要知道这个差异       |
 | 5   | **`delay_ms` 阻塞导致无法做其他事**   | `delay_ms(500)`                                                      | 延迟是 CPU 空转，500ms 内无法处理其他任务                                  | 后续引入 FreeRTOS，改用 `vTaskDelay()`      |
 
-
-
 ## ⑦实验结果视频
 
 https://github.com/user-attachments/assets/b1f57922-2b81-467d-bf4a-64658b0ad503
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
