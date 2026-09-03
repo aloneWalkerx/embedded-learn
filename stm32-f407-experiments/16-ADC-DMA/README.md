@@ -6,36 +6,38 @@
 
 > **目标**：理解 ADC + DMA 模式下的时钟配置。
 
+```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                    STM32F407 时钟树（ADC + DMA 部分）                       │
+│ STM32F407 时钟树（ADC + DMA 部分） │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  【ADC 时钟路径】                                                            │
-│                                                                              │
-│  APB2（84MHz）→ ADC 预分频器（/4）→ 21MHz → ADC3 核心                      │
-│                                                                              │
-│  【DMA 时钟路径】                                                            │
-│                                                                              │
-│  AHB（168MHz）→ DMA2 控制器 → DMA2_Stream1 → ADC3 的 DMA 请求              │
-│                                                                              │
-│  【协同工作流程】                                                            │
-│                                                                              │
-│  ADC3 每 23.4µs 完成一次转换 → 触发 DMA 请求 → DMA2_Stream1 自动搬运数据    │
-│       │                                                                      │
-│       └── 搬运到内存缓冲区（g_adc_dma_buf[]）                               │
-│                                                                              │
+│ │
+│ 【ADC 时钟路径】 │
+│ │
+│ APB2（84MHz）→ ADC 预分频器（/4）→ 21MHz → ADC3 核心 │
+│ │
+│ 【DMA 时钟路径】 │
+│ │
+│ AHB（168MHz）→ DMA2 控制器 → DMA2_Stream1 → ADC3 的 DMA 请求 │
+│ │
+│ 【协同工作流程】 │
+│ │
+│ ADC3 每 23.4µs 完成一次转换 → 触发 DMA 请求 → DMA2_Stream1 自动搬运数据 │
+│ │ │
+│ └── 搬运到内存缓冲区（g_adc_dma_buf[]） │
+│ │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  关键配置：                                                                  │
-│  ┌─────────────────────┬────────────────────────────────────────────────┐   │
-│  │ ADC3 时钟           │ 21MHz                                         │   │
-│  │ DMA2 时钟           │ 168MHz                                        │   │
-│  │ 数据流              │ DMA2_Stream1（也可用 Stream0）                │   │
-│  │ DMA 通道            │ Channel 2（ADC3 专用）                        │   │
-│  │ 传输方向            │ 外设 → 内存                                   │   │
-│  │ 数据宽度            │ 16 位（半字）                                  │   │
-│  │ DMA 模式            │ 普通模式（DMA_NORMAL）                        │   │
-│  └─────────────────────┴────────────────────────────────────────────────┘   │
+│ 关键配置： │
+│ ┌─────────────────────┬────────────────────────────────────────────────┐ │
+│ │ ADC3 时钟 │ 21MHz │ │
+│ │ DMA2 时钟 │ 168MHz │ │
+│ │ 数据流 │ DMA2_Stream1（也可用 Stream0） │ │
+│ │ DMA 通道 │ Channel 2（ADC3 专用） │ │
+│ │ 传输方向 │ 外设 → 内存 │ │
+│ │ 数据宽度 │ 16 位（半字） │ │
+│ │ DMA 模式 │ 普通模式（DMA_NORMAL） │ │
+│ └─────────────────────┴────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────────────┘
+```
 
 #### 与轮询 ADC 实验的对比
 
@@ -79,52 +81,54 @@
 
 > **目标**：理清 ADC + DMA 协同工作的完整数据流。
 
+```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ADC + DMA 完整数据流                                     │
+│ ADC + DMA 完整数据流 │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  【硬件层】（完全自动运行，CPU 不参与）                                     │
-│                                                                             │
-│  外部模拟电压（0~3.3V）→ PA1 → ADC3 通道 1                                │
-│       │                                                                      │
-│       ▼                                                                      │
-│  ADC3 每 23.4µs 完成一次转换 → 结果存入 ADC_DR 寄存器                       │
-│       │                                                                      │
-│       ▼                                                                      │
-│  ADC_DR 非空 → 触发 DMA 请求（DMA 通道 2）                                  │
-│       │                                                                      │
-│       ▼                                                                      │
-│  DMA2_Stream1 从 ADC_DR 读取 16 位数据                                       │
-│       │                                                                      │
-│       ▼                                                                      │
-│  写入 g_adc_dma_buf[index]（内存地址自动递增）                               │
-│       │                                                                      │
-│       ▼                                                                      │
-│  重复直到 index = ADC_DMA_BUF_SIZE（50）                                     │
-│       │                                                                      │
-│       ▼                                                                      │
-│  DMA 传输完成 → 触发 DMA2_Stream1_IRQn 中断                                 │
-│                                                                             │
-│  【中断层】（CPU 短暂介入）                                                   │
-│                                                                             │
-│  DMA2_Stream1_IRQHandler → HAL_DMA_IRQHandler                              │
-│       │                                                                      │
-│       ▼                                                                      │
-│  HAL_ADC_ConvCpltCallback() → g_adc_dma_sta = 1                            │
-│                                                                             │
-│  【应用层】（CPU 在主循环中处理）                                             │
-│                                                                             │
-│  if (g_adc_dma_sta == 1)                                                    │
-│       │                                                                      │
-│       ├── g_adc_dma_sta = 0                                                │
-│       ├── 对 50 个数据求和 → 取平均                                         │
-│       ├── 显示 ADC 值 + 电压值到 LCD                                        │
-│       └── adc_dma_enable(50) → 启动下一次 DMA 采集                         │
-│                                                                             │
-│  ★ 在 DMA 采集期间，CPU 完全自由！                                          │
-│     LED0 正常闪烁，按键可以扫描，LCD 可以刷新                                │
-│                                                                             │
+│ │
+│ 【硬件层】（完全自动运行，CPU 不参与） │
+│ │
+│ 外部模拟电压（0~3.3V）→ PA1 → ADC3 通道 1 │
+│ │ │
+│ ▼ │
+│ ADC3 每 23.4µs 完成一次转换 → 结果存入 ADC_DR 寄存器 │
+│ │ │
+│ ▼ │
+│ ADC_DR 非空 → 触发 DMA 请求（DMA 通道 2） │
+│ │ │
+│ ▼ │
+│ DMA2_Stream1 从 ADC_DR 读取 16 位数据 │
+│ │ │
+│ ▼ │
+│ 写入 g_adc_dma_buf[index]（内存地址自动递增） │
+│ │ │
+│ ▼ │
+│ 重复直到 index = ADC_DMA_BUF_SIZE（50） │
+│ │ │
+│ ▼ │
+│ DMA 传输完成 → 触发 DMA2_Stream1_IRQn 中断 │
+│ │
+│ 【中断层】（CPU 短暂介入） │
+│ │
+│ DMA2_Stream1_IRQHandler → HAL_DMA_IRQHandler │
+│ │ │
+│ ▼ │
+│ HAL_ADC_ConvCpltCallback() → g_adc_dma_sta = 1 │
+│ │
+│ 【应用层】（CPU 在主循环中处理） │
+│ │
+│ if (g_adc_dma_sta == 1) │
+│ │ │
+│ ├── g_adc_dma_sta = 0 │
+│ ├── 对 50 个数据求和 → 取平均 │
+│ ├── 显示 ADC 值 + 电压值到 LCD │
+│ └── adc_dma_enable(50) → 启动下一次 DMA 采集 │
+│ │
+│ ★ 在 DMA 采集期间，CPU 完全自由！ │
+│ LED0 正常闪烁，按键可以扫描，LCD 可以刷新 │
+│ │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### ④ 中断/DMA 机制
 
@@ -155,12 +159,12 @@
 
 **操作**：在 `main.c` 中修改 `ADC_DMA_BUF_SIZE` 宏。
 
-
-
+```
 // 修改前
-#define ADC_DMA_BUF_SIZE    50
+#define ADC_DMA_BUF_SIZE 50
 // 修改后
-#define ADC_DMA_BUF_SIZE    100
+#define ADC_DMA_BUF_SIZE 100
+```
 
 **现象**：缓冲区变大，中断触发频率降低，平均值更稳定，但响应变慢。
 
@@ -172,10 +176,12 @@
 
 **操作**：在 `HAL_ADC_MspInit` 中修改 DMA 模式。
 
+```
 // 修改前
 g_adc_dma_dma_handle.Init.Mode = DMA_NORMAL;
 // 修改后
 g_adc_dma_dma_handle.Init.Mode = DMA_CIRCULAR;
+```
 
 **现象**：DMA 填满缓冲区后自动从头继续填，无需重新调用 `adc_dma_enable()`。
 
@@ -187,14 +193,16 @@ g_adc_dma_dma_handle.Init.Mode = DMA_CIRCULAR;
 
 **操作**：在 `adc.h` 中修改宏定义。
 
+```
 // 修改前
-#define ADC_DMA_ADCX_DMASX                      DMA2_Stream1
-#define ADC_DMA_ADCX_DMASX_IRQn                 DMA2_Stream1_IRQn
-#define ADC_DMA_ADCX_DMASX_IRQHandler           DMA2_Stream1_IRQHandler
+#define ADC_DMA_ADCX_DMASX DMA2_Stream1
+#define ADC_DMA_ADCX_DMASX_IRQn DMA2_Stream1_IRQn
+#define ADC_DMA_ADCX_DMASX_IRQHandler DMA2_Stream1_IRQHandler
 // 修改后
-#define ADC_DMA_ADCX_DMASX                      DMA2_Stream0
-#define ADC_DMA_ADCX_DMASX_IRQn                 DMA2_Stream0_IRQn
-#define ADC_DMA_ADCX_DMASX_IRQHandler           DMA2_Stream0_IRQHandler
+#define ADC_DMA_ADCX_DMASX DMA2_Stream0
+#define ADC_DMA_ADCX_DMASX_IRQn DMA2_Stream0_IRQn
+#define ADC_DMA_ADCX_DMASX_IRQHandler DMA2_Stream0_IRQHandler
+```
 
 **现象**：功能完全相同（ADC3 支持 Stream 0 和 Stream 1）。
 
@@ -206,10 +214,12 @@ g_adc_dma_dma_handle.Init.Mode = DMA_CIRCULAR;
 
 **操作**：在 `adc_dma_enable()` 中修改采样时间参数。
 
+```
 // 修改前（精度最高）
 adc_channel_set(&g_adc_dma_handle, ADC_DMA_ADCX_CHY, 1, ADC_SAMPLETIME_480CYCLES);
 // 修改后（速度最快）
 adc_channel_set(&g_adc_dma_handle, ADC_DMA_ADCX_CHY, 1, ADC_SAMPLETIME_3CYCLES);
+```
 
 **现象**：采样时间变短，采样速度变快，但精度可能下降。
 
@@ -221,13 +231,15 @@ adc_channel_set(&g_adc_dma_handle, ADC_DMA_ADCX_CHY, 1, ADC_SAMPLETIME_3CYCLES);
 
 **操作**：在 `adc.h` 中修改 ADC 外设宏定义。
 
+```
 // 修改前（ADC3）
-#define ADC_DMA_ADCX                            ADC3
+#define ADC_DMA_ADCX ADC3
 // 修改后（ADC1，需查 DMA 映射表）
-#define ADC_DMA_ADCX                            ADC1
+#define ADC_DMA_ADCX ADC1
 // 同时修改 DMA 数据流和通道
-#define ADC_DMA_ADCX_DMASX                      DMA2_Stream0
-#define ADC_DMA_ADCX_DMASX_CHY                  DMA_CHANNEL_0
+#define ADC_DMA_ADCX_DMASX DMA2_Stream0
+#define ADC_DMA_ADCX_DMASX_CHY DMA_CHANNEL_0
+```
 
 **现象**：切换到 ADC1，需同步修改 DMA 映射。
 
