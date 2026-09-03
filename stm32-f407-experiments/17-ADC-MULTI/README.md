@@ -4,22 +4,11 @@
 
 ### ① 时钟树
 
-> **目标**：理解多通道 ADC + DMA 模式下的时钟配置。
+**目标**：理解多通道 ADC + DMA 模式下的时钟配置。
 
-> ┌──────────────────────────────────────────────────────────────────────────────┐
-> │                    STM32F407 时钟树（多通道 ADC + DMA）                    │
-> ├──────────────────────────────────────────────────────────────────────────────┤
-> │                                                                              │
-> │  APB2（84MHz）→ ADC1 预分频器（/4）→ 21MHz → ADC1 核心                    │
-> │  AHB（168MHz）→ DMA2 控制器 → DMA2_Stream0 → ADC1 的 DMA 请求             │
-> │                                                                              │
-> │  工作流程：                                                                  │
-> │  ① ADC1 扫描通道：PA5 → PA6 → PA5 → PA6 ...                               │
-> │  ② 每次转换完成 → 触发 DMA 请求                                             │
-> │  ③ DMA2_Stream0 自动从 ADC_DR 读取数据 → 存入缓冲区                         │
-> │  ④ 缓冲区数据排列：buf[0]=PA5, buf[1]=PA6, buf[2]=PA5, buf[3]=PA6 ...    │
-> │                                                                              │
-> └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+```
 
 #### 与单通道 DMA 实验的对比
 
@@ -68,44 +57,46 @@
 
 ### ③ 数据流
 
-> **目标**：理清多通道 ADC + DMA 协同工作的完整数据流。
+**目标**：理清多通道 ADC + DMA 协同工作的完整数据流。
 
-> ┌─────────────────────────────────────────────────────────────────────────────┐
-> │                    多通道 ADC + DMA 完整数据流                              │
-> ├─────────────────────────────────────────────────────────────────────────────┤
-> │                                                                             │
-> │  【硬件层】（完全自动运行，CPU 不参与）                                     │
-> │                                                                             │
-> │  PA5 模拟电压 → ADC1 通道 5                                                │
-> │  PA6 模拟电压 → ADC1 通道 6                                                │
-> │       │                                                                      │
-> │       ▼                                                                      │
-> │  ADC1 扫描转换：PA5 → PA6 → PA5 → PA6 ...                                 │
-> │       │                                                                      │
-> │       ▼                                                                      │
-> │  每次转换完成 → 触发 DMA 请求 → DMA2_Stream0_Channel0                      │
-> │       │                                                                      │
-> │       ▼                                                                      │
-> │  DMA 写入缓冲区：buf[0]=PA5, buf[1]=PA6, buf[2]=PA5, buf[3]=PA6 ...       │
-> │       │                                                                      │
-> │       ▼                                                                      │
-> │  采集完 100 个数据 → DMA 传输完成中断                                       │
-> │                                                                             │
-> │  【中断层】                                                                  │
-> │                                                                             │
-> │  DMA2_Stream0_IRQHandler → HAL_DMA_IRQHandler                              │
-> │       │                                                                      │
-> │       ▼                                                                      │
-> │  HAL_ADC_ConvCpltCallback() → g_adc_nch_dma_sta = 1                        │
-> │                                                                             │
-> │  【应用层】（CPU 在主循环中处理）                                             │
-> │                                                                             │
-> │  检测到 sta == 1 → 分别提取两个通道的数据                                   │
-> │       │                                                                      │
-> │       ├── CH5：buf[0], buf[2], buf[4]... → 取平均 → 显示                   │
-> │       └── CH6：buf[1], buf[3], buf[5]... → 取平均 → 显示                   │
-> │                                                                             │
-> └─────────────────────────────────────────────────────────────────────────────┘
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 多通道 ADC + DMA 完整数据流 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ │
+│ 【硬件层】（完全自动运行，CPU 不参与） │
+│ │
+│ PA5 模拟电压 → ADC1 通道 5 │
+│ PA6 模拟电压 → ADC1 通道 6 │
+│ │ │
+│ ▼ │
+│ ADC1 扫描转换：PA5 → PA6 → PA5 → PA6 ... │
+│ │ │
+│ ▼ │
+│ 每次转换完成 → 触发 DMA 请求 → DMA2_Stream0_Channel0 │
+│ │ │
+│ ▼ │
+│ DMA 写入缓冲区：buf[0]=PA5, buf[1]=PA6, buf[2]=PA5, buf[3]=PA6 ... │
+│ │ │
+│ ▼ │
+│ 采集完 100 个数据 → DMA 传输完成中断 │
+│ │
+│ 【中断层】 │
+│ │
+│ DMA2_Stream0_IRQHandler → HAL_DMA_IRQHandler │
+│ │ │
+│ ▼ │
+│ HAL_ADC_ConvCpltCallback() → g_adc_nch_dma_sta = 1 │
+│ │
+│ 【应用层】（CPU 在主循环中处理） │
+│ │
+│ 检测到 sta == 1 → 分别提取两个通道的数据 │
+│ │ │
+│ ├── CH5：buf[0], buf[2], buf[4]... → 取平均 → 显示 │
+│ └── CH6：buf[1], buf[3], buf[5]... → 取平均 → 显示 │
+│ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### ④ 中断/DMA 机制
 
@@ -132,13 +123,17 @@
 
 **操作**：在 `adc.h` 中修改 `ADC_NCH_DMA_ADCX_CH_NUM` 宏。
 
-> // 修改前
-> #define ADC_NCH_DMA_ADCX_CH_NUM                 2
-> // 修改后（3 通道）
-> #define ADC_NCH_DMA_ADCX_CH_NUM                 3
-> // 同时新增第 3 个通道的宏定义
-> #define ADC_NCH_DMA_ADCX_CHC                    ADC_CHANNEL_7
-> #define ADC_NCH_DMA_ADCX_CHC_GPIO_PIN           GPIO_PIN_7
+```
+// 修改前
+#define ADC_NCH_DMA_ADCX_CH_NUM 2
+// 修改后（3 通道）
+#define ADC_NCH_DMA_ADCX_CH_NUM 3
+// 同时新增第 3 个通道的宏定义
+#define ADC_NCH_DMA_ADCX_CHC ADC_CHANNEL_7
+#define ADC_NCH_DMA_ADCX_CHC_GPIO_PIN GPIO_PIN_7
+```
+
+
 
 **现象**：可同时采集 3 路模拟信号。
 
@@ -148,10 +143,12 @@
 
 **操作**：在 `HAL_ADC_MspInit` 中修改 DMA 模式。
 
-> // 修改前（普通模式，每次都要重新启动）
-> g_adc_nch_dma_dma_handle.Init.Mode = DMA_NORMAL;
-> // 修改后（循环模式，自动循环覆盖）
-> g_adc_nch_dma_dma_handle.Init.Mode = DMA_CIRCULAR;
+```
+// 修改前（普通模式，每次都要重新启动）
+g_adc_nch_dma_dma_handle.Init.Mode = DMA_NORMAL;
+// 修改后（循环模式，自动循环覆盖）
+g_adc_nch_dma_dma_handle.Init.Mode = DMA_CIRCULAR;
+```
 
 **现象**：循环模式下无需重新调用 `adc_nch_dma_enable()`，DMA 自动循环填充缓冲区。
 
@@ -161,10 +158,12 @@
 
 **操作**：在 `main.c` 中修改宏定义。
 
-> // 修改前
-> #define ADC_NCH_DMA_BUF_SIZE    (50 * ADC_NCH_DMA_ADCX_CH_NUM)
-> // 修改后（每个通道采样 100 次）
-> #define ADC_NCH_DMA_BUF_SIZE    (100 * ADC_NCH_DMA_ADCX_CH_NUM)
+```
+// 修改前
+#define ADC_NCH_DMA_BUF_SIZE (50 * ADC_NCH_DMA_ADCX_CH_NUM)
+// 修改后（每个通道采样 100 次）
+#define ADC_NCH_DMA_BUF_SIZE (100 * ADC_NCH_DMA_ADCX_CH_NUM)
+```
 
 **现象**：缓冲区变大，均值滤波结果更稳定，但 DMA 中断频率降低。
 
@@ -174,13 +173,15 @@
 
 **操作**：在 `adc_nch_dma_enable()` 中调整 `rank` 参数。
 
-> // 当前：PA5 先转，PA6 后转
-> adc_channel_set(..., ADC_NCH_DMA_ADCX_CHA, 1, ...);
-> adc_channel_set(..., ADC_NCH_DMA_ADCX_CHB, 2, ...);
-> // 修改后：PA6 先转，PA5 后转
-> adc_channel_set(..., ADC_NCH_DMA_ADCX_CHB, 1, ...);
-> adc_channel_set(..., ADC_NCH_DMA_ADCX_CHA, 2, ...);
+```
+// 当前：PA5 先转，PA6 后转
+adc_channel_set(..., ADC_NCH_DMA_ADCX_CHA, 1, ...);
+adc_channel_set(..., ADC_NCH_DMA_ADCX_CHB, 2, ...);
+// 修改后：PA6 先转，PA5 后转
+adc_channel_set(..., ADC_NCH_DMA_ADCX_CHB, 1, ...);
+adc_channel_set(..., ADC_NCH_DMA_ADCX_CHA, 2, ...);
+```
 
 **现象**：缓冲区数据排列变为 `buf[0]=PA6, buf[1]=PA5, buf[2]=PA6, buf[3]=PA5...`
 
-**结论**：`rank` 决定转换顺序，修改 `rank` 可调整扫描优先级。
+**结论**：`rank` 决定转换顺序，修改 `rank` 可调整扫描优先
