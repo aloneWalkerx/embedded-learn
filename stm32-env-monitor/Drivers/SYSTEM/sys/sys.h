@@ -10,9 +10,7 @@
   0，不支持OS
   1，支持OS
 */
-
-
-#define  ZX_SYS_SUPPORT_OS
+#define  SYS_SUPPORT_OS          0
 
 //函数声明
 
