@@ -67,6 +67,3 @@
 ..\..\output\main.o: ..\..\Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_pcd_ex.h
 ..\..\output\main.o: ..\..\Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_hcd.h
 ..\..\output\main.o: ..\..\Drivers\CMSIS\Include\core_cm4.h
-..\..\output\main.o: ..\..\Drivers\./SYSTEM/delay/delay.h
-..\..\output\main.o: ..\..\Drivers\./SYSTEM/usart/usart.h
-..\..\output\main.o: F:\InstallSoftWare\MDK\MDK_OLD\ARM\ARMCC\Bin\..\include\stdio.h

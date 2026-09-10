@@ -19,7 +19,10 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-//#include "main.h" 注释掉，改用正点原子的 "./SYSTEM/sys/sys.h"
+/*
+#include "main.h" 注释掉，初始化项目中main.h的内容仅仅是引入了“stm32f4xx_hal.h”
+改用 "./SYSTEM/sys/sys.h"，包含“stm32f4xx_hal.h”，后续按需添加即可
+*/
 #include "./SYSTEM/sys/sys.h"
 #include "stm32f4xx_it.h"
 
