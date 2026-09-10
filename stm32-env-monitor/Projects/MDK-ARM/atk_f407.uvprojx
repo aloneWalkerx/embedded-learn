@@ -423,6 +423,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\SYSTEM\delay\delay.c</FilePath>
             </File>
+            <File>
+              <FileName>usart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\SYSTEM\usart\usart.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
