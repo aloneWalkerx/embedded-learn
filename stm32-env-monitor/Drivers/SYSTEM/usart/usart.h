@@ -1,5 +1,5 @@
-#ifndef  __ZX_USART_H
-#define  __ZX_USART_H
+#ifndef  __USART_H
+#define  __USART_H
 
 #include  "./stdio.h"
 #include  "./SYSTEM/sys/sys.h"

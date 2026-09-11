@@ -1,5 +1,5 @@
-#ifndef  __ZX_DELAY_H
-#define  __ZX_DELAY_H
+#ifndef  __DELAY_H
+#define  __DELAY_H
 
 #include  "./SYSTEM/sys/sys.h"
 

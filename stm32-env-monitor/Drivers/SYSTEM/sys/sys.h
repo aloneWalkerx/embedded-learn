@@ -1,5 +1,5 @@
-#ifndef  __ZX_SYS_H
-#define  __ZX_SYS_H
+#ifndef  __SYS_H
+#define  __SYS_H
 
 #include "stm32f4xx.h"
 #include "core_cm4.h"
