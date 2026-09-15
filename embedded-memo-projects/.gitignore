@@ -1,0 +1,24 @@
+# ===== Keil MDK 编译输出（忽略）=====
+Objects/
+Listings/
+DebugConfig/
+RTE/
+*.o
+*.d
+*.crf
+*.axf
+*.elf
+*.hex
+*.bin
+*.map
+*.dep
+*.lst
+*.lnp
+*.build_log.htm
+*.uvoptx
+*.uvguix.*
+*.scvd
+
+# ===== 系统/杂项 =====
+Thumbs.db
+Desktop.ini
