@@ -5,72 +5,92 @@
 #include  "./SYSTEM/sys/sys.h"
 
 
-//Òý½Å£¬´®¿Ú¶¨Òå£¬µ±Ç°Ä¬ÈÏÊÇUSART1,Ö§³ÖUSART1~USART7µÄÈÎÒâÒ»¸ö´®¿Ú
-    //·¢ËÍÒý½Å¶¨Òå
-        //Òý½ÅÀàÐÍ
+//å¼•è„šï¼Œä¸²å£å®šä¹‰ï¼Œå½“å‰é»˜è®¤æ˜¯USART1,æ”¯æŒUSART1~USART7çš„ä»»æ„ä¸€ä¸ªä¸²å£
+    //å‘é€å¼•è„šå®šä¹‰
+        //å¼•è„šç±»åž‹
         #define  USART_TX_GPIO_PIN_TYPE                  GPIOA
         
-        //Òý½ÅºÅ
+        //å¼•è„šå·
         #define  USART_TX_GPIO_PIN                       GPIO_PIN_9
         
-        //¸´ÓÃºÅ
+        //å¤ç”¨å·
         #define  USART_TX_GPIO_AF                        GPIO_AF7_USART1
         
-        //Ê¹ÄÜ·¢ËÍÒý½Å
+        //ä½¿èƒ½å‘é€å¼•è„š
         #define  USART_TX_GPIO_CLK_ENABLE()              do {__HAL_RCC_GPIOA_CLK_ENABLE();}while(0)
 
-    //½ÓÊÕÒý½Å¶¨Òå
-        //Òý½ÅÀàÐÍ
+    //æŽ¥æ”¶å¼•è„šå®šä¹‰
+        //å¼•è„šç±»åž‹
         #define  USART_RX_GPIO_PIN_TYPE                  GPIOA
         
-        //Òý½ÅºÅ
+        //å¼•è„šå·
         #define  USART_RX_GPIO_PIN                       GPIO_PIN_10
         
-        //¸´ÓÃºÅ
+        //å¤ç”¨å·
         #define  USART_RX_GPIO_AF                        GPIO_AF7_USART1
         
-        //Ê¹ÄÜ·¢ËÍÒý½Å
+        //ä½¿èƒ½å‘é€å¼•è„š
         #define  USART_RX_GPIO_CLK_ENABLE()              do {__HAL_RCC_GPIOA_CLK_ENABLE();}while(0)
         
-    //´®¿Ú¶¨Òå
-        //´®¿ÚºÅ
+    //ä¸²å£å®šä¹‰
+        //ä¸²å£å·
         #define  USARTX                                  USART1
         
-        //ÖÐ¶Ïº¯Êý
+        //ä¸­æ–­å‡½æ•°
         #define  USARTX_IRQn                             USART1_IRQn
         
-        //ÖÐ¶Ï·þÎñº¯Êý
+        //ä¸­æ–­æœåŠ¡å‡½æ•°
         #define  USARTX_IRQHandler                       USART1_IRQHandler 
         
-        //Ê¹ÄÜ´®¿ÚÊ±ÖÓ
+        //ä½¿èƒ½ä¸²å£æ—¶é’Ÿ
         #define  USARTX_CLK_ENABLE()                     do {__HAL_RCC_USART1_CLK_ENABLE();}while(0)
         
-//´®¿Ú²ÎÊýÉèÖÃ
-        //´®¿Ú×î´ó½ÓÊÕ×Ö½ÚÊý
+//ä¸²å£å‚æ•°è®¾ç½®
+        //ä¸²å£æœ€å¤§æŽ¥æ”¶å­—èŠ‚æ•°
         #define  USART_REC_LEN_MAX                       200
             
-        //´®¿Ú½ÓÊÕ×´Ì¬(1£º¿ªÆô½ÓÊÕ£¬0£º¹Ø±Õ½ÓÊÕ)
+        //ä¸²å£æŽ¥æ”¶çŠ¶æ€(1ï¼šå¼€å¯æŽ¥æ”¶ï¼Œ0ï¼šå…³é—­æŽ¥æ”¶)
         #define  USART_REC_ENABLE_STATUS                 1
             
-        //½ÓÊÕ»º´æ´óÐ¡
+        //æŽ¥æ”¶ç¼“å­˜å¤§å°
         #define  HAL_REC_BUF_SIZE                        1            
 
-//Íâ²¿ÉùÃ÷
-        //USART¾ä±ú
+//å¤–éƒ¨å£°æ˜Ž
+        //USARTå¥æŸ„
         extern  UART_HandleTypeDef  g_uart_handle_type_def;
         
-        //×î´ó½ÓÊÕ»º³å£¬×î´óUSART_REC_LEN_MAX¸ö×Ö½Ú£¬Ä©×Ö½ÚÎª»»ÐÐ·û
+        //æœ€å¤§æŽ¥æ”¶ç¼“å†²ï¼Œæœ€å¤§USART_REC_LEN_MAXä¸ªå­—èŠ‚ï¼Œæœ«å­—èŠ‚ä¸ºæ¢è¡Œç¬¦
         extern  uint8_t  g_usart_rec_buf_max[USART_REC_LEN_MAX];
         
-        //½ÓÊÕ×´Ì¬±ê¼Ç
+        //æŽ¥æ”¶çŠ¶æ€æ ‡è®°
         extern  uint16_t  g_usart_rec_status;
         
-        //HAL¿âUSART½ÓÊÕBuffer
+        //HALåº“USARTæŽ¥æ”¶Buffer
         extern  uint8_t  g_hal_rec_buf[HAL_REC_BUF_SIZE];
         
-//º¯ÊýÉùÃ÷
-        //´®¿Ú³õÊ¼»¯
+//å‡½æ•°å£°æ˜Ž
+        //ä¸²å£åˆå§‹åŒ–
         void usart_init(uint32_t baudrate);
         
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
