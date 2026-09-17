@@ -48,18 +48,23 @@ int main(void)
 
    /* ④ 初始化 LED：开 GPIOF 时钟 + 配 PF9/PF10 为推挽输出 + 默认熄灭 */
    led_init();
-
+    //初始化按键
    key_init();
    
    while(1){
+       //检测按键是否被按下
        switch(key_scan(0)){
+           //KEYUP被按下
            case KEYUP_PRESS : 
            {
+               //切换LED0状态
                LED0_TOGGLE();
                break;
            }
+           //KEY0被按下
            case KEY0_PRESS:
            {
+               //切换LED1状态
                LED1_TOGGLE();
                break;
            }
@@ -69,7 +74,4 @@ int main(void)
    delay_ms(10);
    
    }
-   
-   
-
 }

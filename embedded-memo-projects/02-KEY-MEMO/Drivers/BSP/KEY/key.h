@@ -1,28 +1,82 @@
+/* ============================================================================
+ * key.h —— 按键板级驱动头文件
+ * ----------------------------------------------------------------------------
+ * 提供：GPIO 引脚宏、时钟使能宏、引脚电平读取宏、键值定义、函数声明
+ * 硬件：KEYUP → PA0（WK_UP），KEY0 → PE4（与 BOOT0 共用）
+ *       两键公共端接 VCC3.3 → 按下为高电平 → 内部下拉
+ * ==========================================================================*/
+
 #ifndef __KEY_H
 #define __KEY_H
 
+
+/* 包含 sys.h：提供 uint8_t 类型、HAL 库入口、GPIO_TypeDef 等基础定义 */
 #include "./SYSTEM/SYS/sys.h"
 
-#define KEYUP_GPIO_PIN_TYPE                 GPIOA
-#define KEYUP_GPIO_PIN                      GPIO_PIN_0
-#define KEYUP_GPIO_CLK_ENABLE()             do{ __HAL_RCC_GPIOA_CLK_ENABLE();}while(0)
 
-#define KEY0_GPIO_PIN_TYPE                  GPIOE
-#define KEY0_GPIO_PIN                       GPIO_PIN_4
-#define KEY0_GPIO_CLK_ENABLE()              do{ __HAL_RCC_GPIOE_CLK_ENABLE();}while(0)
-
-
-#define READ_KEYUP_PIN                      ((HAL_GPIO_ReadPin(KEYUP_GPIO_PIN_TYPE, KEYUP_GPIO_PIN) == GPIO_PIN_SET) ? 1 : 0)
-#define READ_KEY0_PIN                       ((HAL_GPIO_ReadPin(KEY0_GPIO_PIN_TYPE, KEY0_GPIO_PIN) == GPIO_PIN_SET) ? 1 : 0)
-
-#define NONE_PRESS                          0
-#define KEYUP_PRESS                         1
-#define KEY0_PRESS                          2
+/* ----------------------------------------------------------------------------
+ * KEYUP（WK_UP）按键的硬件抽象
+ * 用途：业务层只认 KEYUP 这个名字，不关心它挂在 GPIOA 的哪个引脚
+ * 好处：换板子只改这一处，业务代码不动
+ * --------------------------------------------------------------------------*/
+#define KEYUP_GPIO_PIN_TYPE             GPIOA                    /* KEYUP 所在端口：GPIOA */
+#define KEYUP_GPIO_PIN                  GPIO_PIN_0               /* KEYUP 所在引脚：PA0（对应 WK_UP 功能）*/
+#define KEYUP_GPIO_CLK_ENABLE()         do{ __HAL_RCC_GPIOA_CLK_ENABLE();}while(0)
+                                                                 /* 开 GPIOA 时钟的"语句宏"
+                                                                  * 用 do{}while(0) 包起来 → 保证在 if/else 里当单条语句用不会出错
+                                                                  * 末尾不加分号 → 由调用者写 `KEYUP_GPIO_CLK_ENABLE();`
+                                                                  * 内部调 HAL 宏：置位 RCC->AHB1ENR 的 bit0（GPIOAEN）*/
 
 
-void key_init(void);
-uint8_t key_scan(uint8_t keyMode);
+/* ----------------------------------------------------------------------------
+ * KEY0 按键的硬件抽象
+ * ?? 硬件特殊点：KEY0（PE4）与 BOOT0 共用！
+ *    上电/复位瞬间按住 KEY0 → BOOT0 被拉高 → MCU 进入 Bootloader 模式
+ *    上电后 PE4 正常作为普通输入使用，不影响
+ * --------------------------------------------------------------------------*/
+#define KEY0_GPIO_PIN_TYPE              GPIOE                    /* KEY0 所在端口：GPIOE */
+#define KEY0_GPIO_PIN                   GPIO_PIN_4               /* KEY0 所在引脚：PE4 */
+#define KEY0_GPIO_CLK_ENABLE()          do{ __HAL_RCC_GPIOE_CLK_ENABLE();}while(0)
+                                                                 /* 开 GPIOE 时钟的"语句宏"
+                                                                  * 置位 RCC->AHB1ENR 的 bit4（GPIOEEN）*/
 
+
+/* ----------------------------------------------------------------------------
+ * 引脚电平读取宏（"值宏"：返回一个表达式的值）
+ * ----------------------------------------------------------------------------
+ * 展开后是一个三元表达式：
+ *   HAL_GPIO_ReadPin(...) == GPIO_PIN_SET ? 1 : 0
+ *   读到高电平（GPIO_PIN_SET）→ 返回 1
+ *   读到低电平（GPIO_PIN_RESET）→ 返回 0
+ *
+ * ?? 值宏末尾绝对不加分号！
+ *    加了分号的话，`if(READ_KEYUP_PIN == 1)` 展开后会变成
+ *    `if( (…?1:0);  == 1)`，括号里凭空多出分号，语法直接崩
+ *
+ * 硬件对应：按下 → 3.3V 灌到引脚 → 读到 GPIO_PIN_SET → 宏返回 1
+ *          松开 → 内部下拉到 GND → 读到 GPIO_PIN_RESET → 宏返回 0
+ * --------------------------------------------------------------------------*/
+#define READ_KEYUP_PIN                  ((HAL_GPIO_ReadPin(KEYUP_GPIO_PIN_TYPE, KEYUP_GPIO_PIN) == GPIO_PIN_SET) ? 1 : 0)
+                                                                 /* 读 KEYUP（PA0）当前电平，归一化为 1/0 */
+
+#define READ_KEY0_PIN                   ((HAL_GPIO_ReadPin(KEY0_GPIO_PIN_TYPE, KEY0_GPIO_PIN) == GPIO_PIN_SET) ? 1 : 0)
+                                                                 /* 读 KEY0（PE4）当前电平，归一化为 1/0 */
+
+
+/* ----------------------------------------------------------------------------
+ * 键值定义：key_scan() 的返回值
+ * 用宏而不是魔数，业务层看到的是 KEYUP_PRESS / KEY0_PRESS 而不是 1/2
+ * --------------------------------------------------------------------------*/
+#define NONE_PRESS                      0                        /* 无按键按下 */
+#define KEYUP_PRESS                     1                        /* KEYUP 被按下 */
+#define KEY0_PRESS                      2                        /* KEY0 被按下 */
+
+
+/* ----------------------------------------------------------------------------
+ * 对外函数声明
+ * --------------------------------------------------------------------------*/
+void    key_init(void);                                          /* 按键 GPIO 初始化 */
+uint8_t key_scan(uint8_t keyMode);                               /* 扫描一次按键，返回键值；keyMode!=0 支持连按 */
 
 
 #endif
