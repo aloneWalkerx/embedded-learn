@@ -13,6 +13,8 @@
 /* 包含 delay.h：拿到 delay_init() / delay_ms() / delay_us() */
 #include "./SYSTEM/DELAY/delay.h"
 
+#include "./BSP/EXTI/exti.h"
+
 
 int main(void)
 {
@@ -47,11 +49,12 @@ int main(void)
    /* ④ 初始化 LED：开 GPIOF 时钟 + 配 PF9/PF10 为推挽输出 + 默认熄灭 */
    led_init();
 
-
+   exti_init();
 
    while(1)
     {
      
+        
     }
 
 }
