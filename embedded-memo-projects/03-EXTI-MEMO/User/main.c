@@ -48,12 +48,14 @@ int main(void)
 
    /* ④ 初始化 LED：开 GPIOF 时钟 + 配 PF9/PF10 为推挽输出 + 默认熄灭 */
    led_init();
-
+   //初始化外部中断
    exti_init();
 
    while(1)
     {
-     
+     //按键按下处理
+     key_exti_process();
+     delay_ms(10);
         
     }
 
