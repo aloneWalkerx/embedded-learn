@@ -15,6 +15,8 @@
 
 #include "./SYSTEM/usart/usart.h"                   // 包含串口驱动头文件，使用 usart_init、g_usart_status_data 等
 
+#include "./BSP/TIM/btim.h"
+
 int main(void)
 {
 
@@ -51,9 +53,8 @@ int main(void)
 
     usart_init(115200);                             // 初始化 USART1，波特率 115200
 
+    btim_init(5000 - 1, 8400 - 1);
     while (1) {                                     // 主循环，无限循环
-        
-		
 
     }
 
