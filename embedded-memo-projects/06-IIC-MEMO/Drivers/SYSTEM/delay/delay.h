@@ -11,7 +11,7 @@ void delay_init(uint16_t sysclk);
 void delay_ms(uint16_t ms);
 
 //延时ns
-void delay_ns(uint16_t us);
+void delay_us(uint32_t us);
 
 //不支持OS
 #if (!ZX_SYS_SUPPORT_OS)

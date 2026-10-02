@@ -7,15 +7,12 @@
 /* 包含 sys.h：提供系统类型定义 + sys_stm32_clk_init() 时钟配置函数声明 */
 #include "./SYSTEM/SYS/sys.h"
 
-/* 包含 led.h：拿到 led_init() / LEDx_ON() / LEDx_OFF() */
-#include "./BSP/LED/led.h"
-
 /* 包含 delay.h：拿到 delay_init() / delay_ms() / delay_us() */
 #include "./SYSTEM/DELAY/delay.h"
 
 #include "./SYSTEM/usart/usart.h"                   // 包含串口驱动头文件，使用 usart_init、g_usart_status_data 等
 
-#include "./BSP/TIM/btim.h"
+#include "./BSP/IIC/iic.h"
 
 int main(void)
 {
@@ -48,13 +45,11 @@ int main(void)
      * 这里必须传 168 —— 传错了延时就不准 */
     delay_init(168);                                // 初始化延时函数，传入系统时钟频率 168MHz
 
-
     usart_init(115200);                             // 初始化 USART1，波特率 115200
 
-   
+    iic_init();                                     //初始化iic
+
     while (1) {                                     // 主循环，无限循环
-        
-        
 
     }
 
