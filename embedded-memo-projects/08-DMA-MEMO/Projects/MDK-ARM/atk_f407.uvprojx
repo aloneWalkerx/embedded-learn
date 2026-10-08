@@ -414,9 +414,9 @@
           <GroupName>Drivers/BSP</GroupName>
           <Files>
             <File>
-              <FileName>spi.c</FileName>
+              <FileName>dma.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\Drivers\BSP\SPI\spi.c</FilePath>
+              <FilePath>..\..\Drivers\BSP\DMA\dma.c</FilePath>
             </File>
           </Files>
         </Group>
