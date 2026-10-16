@@ -1,7 +1,6 @@
 #include "./SYSTEM/SYS/sys.h"
-
 #include "./SYSTEM/DELAY/delay.h"
-
+#include "./BSP/LED/led.h"
 
 int main(void)
 {
@@ -32,13 +31,24 @@ int main(void)
     * 内部用 SysTick 或 TIM 实现 delay_us / delay_ms
     * 这里必须传 168 —— 传错了延时就不准 */
    delay_init(168);
-
+    //LED初始化
+   can_led_init();
   
    while(1){
-       
-       
-
+       //开启LED0
+       CAN_LED0_ON();
+       //关闭LED1
+       CAN_LED1_OFF();
+       //延时0.5秒
+       delay_ms(500);
+       //关闭LED0
+       CAN_LED0_OFF();
+       //开启LED1
+       CAN_LED1_ON();
+       //延时0.5秒
+       delay_ms(500);
    
     }
 
 }
+
