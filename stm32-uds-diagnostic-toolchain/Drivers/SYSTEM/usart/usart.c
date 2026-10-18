@@ -180,11 +180,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *uart){
       
      }
       
-     // 每接收完一个数据后重新开启接收中断
-     HAL_UART_Receive_IT(&g_uart_handle, g_can_usartx_rx_buffer, CAN_USARTX_RX_BUFFER_SIZE);
+     
          
    }
-    
+   // 每接收完一个数据后重新开启接收中断
+     HAL_UART_Receive_IT(&g_uart_handle, g_can_usartx_rx_buffer, CAN_USARTX_RX_BUFFER_SIZE); 
  }
 
 }

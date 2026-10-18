@@ -26,5 +26,5 @@ void can_led_init(void){
     CAN_LED0_OFF();
     //LED1д╛хо╧ь╠у
     CAN_LED1_OFF();
-
+   
 }

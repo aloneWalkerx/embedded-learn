@@ -20,14 +20,14 @@
 #define  CAN_LED1_GPIO_CLK_ENABLE()      do{__HAL_RCC_GPIOF_CLK_ENABLE();}while(0)
 
 //LED0关闭
-#define  CAN_LED0_OFF()                     HAL_GPIO_WritePin(CAN_LED0_GPIO_PORT,CAN_LED0_GPIO_PIN,GPIO_PIN_RESET);
+#define  CAN_LED0_ON()                     HAL_GPIO_WritePin(CAN_LED0_GPIO_PORT,CAN_LED0_GPIO_PIN,GPIO_PIN_RESET);
 //LED0开启
-#define  CAN_LED0_ON()                      HAL_GPIO_WritePin(CAN_LED0_GPIO_PORT,CAN_LED0_GPIO_PIN,GPIO_PIN_SET);
+#define  CAN_LED0_OFF()                      HAL_GPIO_WritePin(CAN_LED0_GPIO_PORT,CAN_LED0_GPIO_PIN,GPIO_PIN_SET);
 
 //LED1关闭
-#define  CAN_LED1_OFF()                     HAL_GPIO_WritePin(CAN_LED1_GPIO_PORT,CAN_LED1_GPIO_PIN,GPIO_PIN_RESET);
+#define  CAN_LED1_ON()                     HAL_GPIO_WritePin(CAN_LED1_GPIO_PORT,CAN_LED1_GPIO_PIN,GPIO_PIN_RESET);
 //LED1开启
-#define  CAN_LED1_ON()                      HAL_GPIO_WritePin(CAN_LED1_GPIO_PORT,CAN_LED1_GPIO_PIN,GPIO_PIN_SET);
+#define  CAN_LED1_OFF()                      HAL_GPIO_WritePin(CAN_LED1_GPIO_PORT,CAN_LED1_GPIO_PIN,GPIO_PIN_SET);
 
 //LED初始化
 void can_led_init(void);
