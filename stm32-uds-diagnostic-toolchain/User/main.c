@@ -1,53 +1,53 @@
-#include "./SYSTEM/SYS/sys.h"
-#include "./SYSTEM/DELAY/delay.h"
+#include "./SYSTEM/sys/sys.h"
+#include "./SYSTEM/delay/delay.h"
 #include "./BSP/LED/led.h"
+#include "./SYSTEM/usart/usart.h"
 
 int main(void)
 {
-   /* â‘  HAL åº“åˆå§‹åŒ–
-    * å†…éƒ¨åšï¼šå¤ä½æ‰€æœ‰å¤–è®¾ã€åˆå§‹åŒ– Flash æŽ¥å£ã€é…ç½® SysTick ä¸º 1ms ä¸­æ–­
-    * ã€å¿…é¡»æ”¾æœ€å‰é¢ã€‘â€”â€” åŽé¢çš„ HAL_Delay / delay éƒ½ä¾èµ–å®ƒé…å¥½çš„ SysTick */
-   HAL_Init();
+   
+   
+    /* ¢Ù HAL ¿â³õÊ¼»¯
+     * ÄÚ²¿×ö£º¸´Î»ËùÓÐÍâÉè¡¢³õÊ¼»¯ Flash ½Ó¿Ú¡¢ÅäÖÃ SysTick Îª 1ms ÖÐ¶Ï
+     * ¡¾±ØÐë·Å×îÇ°Ãæ¡¿¡ª¡ª ºóÃæµÄ HAL_Delay / delay ¶¼ÒÀÀµËüÅäºÃµÄ SysTick */
+    HAL_Init();                                     // ³õÊ¼»¯ HAL ¿â£¬ÅäÖÃ SysTick Îª 1ms ÖÐ¶Ï
 
-   /* â‘¡ é…ç½®ç³»ç»Ÿæ—¶é’Ÿåˆ° 168MHz
-    * å‚æ•°ï¼šsys_stm32_clk_init(PLLN, PLLM, PLLP, PLLQ)ï¼Œæ¿è½½ HSE = 8MHz
-    *
-    *   ç®—å¼ï¼š
-    *     VCO è¾“å…¥ = HSE / PLLM = 8 / 8    = 1 MHz
-    *     VCO è¾“å‡º = 1MHz Ã— PLLN = 1 Ã— 336 = 336 MHz
-    *     SYSCLK   = VCO / PLLP  = 336 / 2  = 168 MHz  âœ…ï¼ˆF407 æœ€é«˜ä¸»é¢‘ï¼‰
-    *     PLLQ è¾“å‡º = 336 / 7               = 48 MHz   âœ…ï¼ˆUSB/SDIO/RNG ç”¨ï¼‰
-    *
-    * åˆ†é¢‘ç»“æžœï¼ˆè¿™å°±æ˜¯"æ—¶é’Ÿæ ‘"ï¼‰ï¼š
-    *     AHB  = 168MHz  ï¼ˆGPIO æŒ‚ AHB1ï¼‰
-    *     APB1 = 42MHz   ï¼ˆUSART2/3ã€I2Cã€CAN æŒ‚è¿™é‡Œï¼‰
-    *     APB2 = 84MHz   ï¼ˆUSART1ã€SPI1 æŒ‚è¿™é‡Œï¼‰
-    *
-    * âš ï¸ è¿›é˜¶ç»†èŠ‚ï¼šST å»ºè®® VCO è¾“å…¥å– 2MHzï¼ˆé™ä½Ž PLL æŠ–åŠ¨ï¼‰ï¼Œè¿™é‡Œæ˜¯ 1MHz
-    *    åœ¨è§„æ ¼å†…ï¼ˆ1~2MHzï¼‰ä½†éžæœ€ä¼˜ã€‚è¦æ”¹ï¼šsys_stm32_clk_init(168, 4, 2, 7) */
-   sys_stm32_clk_init(336,8,2,7);
+    /* ¢Ú ÅäÖÃÏµÍ³Ê±ÖÓµ½ 168MHz
+     * ²ÎÊý£ºsys_stm32_clk_init(PLLN, PLLM, PLLP, PLLQ)£¬°åÔØ HSE = 8MHz
+     *
+     *   ËãÊ½£º
+     *     VCO ÊäÈë = HSE / PLLM = 8 / 8    = 1 MHz
+     *     VCO Êä³ö = 1MHz ¡Á PLLN = 1 ¡Á 336 = 336 MHz
+     *     SYSCLK   = VCO / PLLP  = 336 / 2  = 168 MHz  ?£¨F407 ×î¸ßÖ÷Æµ£©
+     *     PLLQ Êä³ö = 336 / 7               = 48 MHz   ?£¨USB/SDIO/RNG ÓÃ£©
+     *
+     * ·ÖÆµ½á¹û£¨Õâ¾ÍÊÇ"Ê±ÖÓÊ÷"£©£º
+     *     AHB  = 168MHz  £¨GPIO ¹Ò AHB1£©
+     *     APB1 = 42MHz   £¨USART2/3¡¢I2C¡¢CAN ¹ÒÕâÀï£©
+     *     APB2 = 84MHz   £¨USART1¡¢SPI1 ¹ÒÕâÀï£©
+     *
+     * ?? ½ø½×Ï¸½Ú£ºST ½¨Òé VCO ÊäÈëÈ¡ 2MHz£¨½µµÍ PLL ¶¶¶¯£©£¬ÕâÀïÊÇ 1MHz
+     *    ÔÚ¹æ¸ñÄÚ£¨1~2MHz£©µ«·Ç×îÓÅ¡£Òª¸Ä£ºsys_stm32_clk_init(168, 4, 2, 7) */
+    sys_stm32_clk_init(336, 8, 2, 7);               // ÅäÖÃÏµÍ³Ê±ÖÓ£ºPLLN=336, PLLM=8, PLLP=2, PLLQ=7£¬µÃµ½ 168MHz
 
-   /* â‘¢ åˆå§‹åŒ–å»¶æ—¶å‡½æ•°ï¼Œä¼ å…¥ç³»ç»Ÿæ—¶é’Ÿé¢‘çŽ‡ï¼ˆå•ä½ MHzï¼‰
-    * å†…éƒ¨ç”¨ SysTick æˆ– TIM å®žçŽ° delay_us / delay_ms
-    * è¿™é‡Œå¿…é¡»ä¼  168 â€”â€” ä¼ é”™äº†å»¶æ—¶å°±ä¸å‡† */
-   delay_init(168);
-    //LEDåˆå§‹åŒ–
-   can_led_init();
+    /* ¢Û ³õÊ¼»¯ÑÓÊ±º¯Êý£¬´«ÈëÏµÍ³Ê±ÖÓÆµÂÊ£¨µ¥Î» MHz£©
+     * ÄÚ²¿ÓÃ SysTick »ò TIM ÊµÏÖ delay_us / delay_ms
+     * ÕâÀï±ØÐë´« 168 ¡ª¡ª ´«´íÁËÑÓÊ±¾Í²»×¼ */
+    delay_init(168);                                // ³õÊ¼»¯ÑÓÊ±º¯Êý£¬´«ÈëÏµÍ³Ê±ÖÓÆµÂÊ 168MHz
+    //³õÊ¼»¯LED
+    can_led_init();
+    //³õÊ¼»¯´®¿Ú
+    can_usartx_init(115200);
   
    while(1){
-       //å¼€å¯LED0
-       CAN_LED0_ON();
-       //å…³é—­LED1
-       CAN_LED1_OFF();
-       //å»¶æ—¶0.5ç§’
-       delay_ms(500);
-       //å…³é—­LED0
-       CAN_LED0_OFF();
-       //å¼€å¯LED1
-       CAN_LED1_ON();
-       //å»¶æ—¶0.5ç§’
-       delay_ms(500);
-   
+      
+       if(g_can_usartx_status_data & 0x8000){
+           printf("\r\nSTM32 CAN»ù´¡¿ò¼Ü×¼±¸£¬STM32½ÓÊÕÊý¾ÝºóÔÙ·¢ËÍ£¬Äã·¢ËÍµÄÊý¾ÝÎª:\r\n");
+       HAL_UART_Transmit(&g_uart_handle, g_can_usartx_rx_buffer_max, (g_can_usartx_status_data & 0x3FFF),HAL_MAX_DELAY);
+       printf("\r\n");
+          
+       g_can_usartx_status_data = 0;
+       }
     }
 
 }
