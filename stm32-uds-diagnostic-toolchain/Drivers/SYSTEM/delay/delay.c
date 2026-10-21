@@ -28,15 +28,14 @@ static uint16_t g_delay_mul_ms = 0;
  */
 
 /* 支持UCOSII */
-    //OS是否运行标记,0,不运行;1,在运行
+//OS是否运行标记,0,不运行;1,在运行
     #define delay_osrunning     OSRunning
-    
-    //OS时钟节拍,即每秒调度次数
-    #define delay_ostickspersec OS_TICKS_PER_SEC
-    
-    //中断嵌套级别,即中断嵌套次数
-    #define delay_osintnesting  OSIntNesting
 
+//OS时钟节拍,即每秒调度次数
+    #define delay_ostickspersec OS_TICKS_PER_SEC
+
+//中断嵌套级别,即中断嵌套次数
+    #define delay_osintnesting  OSIntNesting
 
 /**
  * @brief     us级延时时,关闭任务调度(防止打断us级延迟)
@@ -73,9 +72,9 @@ void delay_ostimedly(uint32_t ticks)
 
 /**
  * @brief     systick中断服务函数,使用OS时用到
- * @param     ticks : 延时的节拍数  
+ * @param     ticks : 延时的节拍数
  * @retval    无
- */  
+ */
 void SysTick_Handler(void)
 {
     //OS 开始跑了,才执行正常的调度处理
@@ -92,17 +91,17 @@ void SysTick_Handler(void)
  * @brief     初始化延迟函数
  * @param     sysclk: 系统时钟频率, 即CPU频率(rcc_c_ck), 168MHz
  * @retval    无
- */  
+ */
 void delay_init(uint16_t sysclk)
 {
-//如果需要支持OS
+    //如果需要支持OS
 #if SYS_SUPPORT_OS
     uint32_t reload;
 #endif
     //由于在HAL_Init中已对systick做了配置，所以这里无需重新配置
     g_delay_mul_us = sysclk;
- 
-//如果需要支持OS    
+
+    //如果需要支持OS
 #if SYS_SUPPORT_OS
     //每秒钟的计数次数 单位为M
     reload = sysclk;
@@ -111,19 +110,19 @@ void delay_init(uint16_t sysclk)
      寄存器,最大值:16777216,在168M下,约合0.09986s左右
     */
     reload *= 1000000 / delay_ostickspersec;
-    
+
     //代表OS可以延时的最少单位
     g_delay_mul_ms = 1000 / delay_ostickspersec;
-    
+
     //开启SYSTICK中断
     SysTick->CTRL |= 1 << 1;
-    
+
     //每1/delay_ostickspersec秒中断一次
     SysTick->LOAD = reload;
-    
+
     //开启SYSTICK
     SysTick->CTRL |= 1 << 0;
-#endif 
+#endif
 
 }
 
@@ -138,30 +137,30 @@ void delay_us(uint32_t n_us)
 {
     //节拍数
     uint32_t us_ticks;
-    
+
     //us_start：刚进入时的值，us_current：当前的值，us_total：累计值
     uint32_t us_start, us_current, us_total = 0;
-    
+
     //LOAD重装载值
     uint32_t reload = SysTick->LOAD;
-    
+
     //需要的节拍数
     us_ticks = n_us * g_delay_mul_us;
-    
-//如果需要支持OS     
+
+    //如果需要支持OS
 #if SYS_SUPPORT_OS
-    
+
     //锁定 OS 的任务调度器
     delay_osschedlock();
 #endif
-    
-    //刚进入时的计数器值 
+
+    //刚进入时的计数器值
     us_start = SysTick->VAL;
     while (1)
     {
         //当前的计数器值
         us_current = SysTick->VAL;
-        
+
         //如果当前值不等于刚进入时的值(需要产生时间差)
         if (us_current != us_start)
         {
@@ -177,12 +176,12 @@ void delay_us(uint32_t n_us)
                 //累计值 = 累计值 + (重装载值 - 当前值 + 刚开始进入时的值)
                 us_total += reload - us_current + us_start;
             }
-            
+
             //累计值计数周期结束，将刚开始进入的值赋值为当前值，便于下一个累计值计数周期计算
             us_start = us_current;
-            
+
             //累计值 >= 所需要的节拍数,即到达了指定的延时时间
-            if (us_total >= us_ticks) 
+            if (us_total >= us_ticks)
             {
                 //时间超过或等于要延迟的时间,则退出
                 break;
@@ -190,13 +189,13 @@ void delay_us(uint32_t n_us)
         }
     }
 
-//如果需要支持OS
+    //如果需要支持OS
 #if SYS_SUPPORT_OS
-    
+
     //恢复 OS 的任务调度器
     delay_osschedunlock();
-#endif 
-    
+#endif
+
 }
 
 /**
@@ -207,9 +206,9 @@ void delay_us(uint32_t n_us)
 void delay_ms(uint16_t n_ms)
 {
 
-//如果需要支持OS, 则根据情况调用os延时以释放CPU    
+    //如果需要支持OS, 则根据情况调用os延时以释放CPU
 #if SYS_SUPPORT_OS
-    
+
     //如果OS已经在跑了,并且不是在中断里面(中断里面不能任务调度)
     if (delay_osrunning && delay_osintnesting == 0)
     {
@@ -219,14 +218,14 @@ void delay_ms(uint16_t n_ms)
             //OS延时
             delay_ostimedly(nms / g_delay_mul_ms);
         }
-        
+
         //OS已经无法提供这么小的延时了,采用普通方式延时
         nms %= g_delay_mul_ms;
     }
 #endif
 
     //普通方式延时
-    delay_us((uint32_t)(n_ms * 1000));
+    delay_us((uint32_t) (n_ms * 1000));
 }
 
 /**
@@ -237,8 +236,5 @@ void delay_ms(uint16_t n_ms)
  */
 void HAL_Delay(uint32_t Delay)
 {
-     delay_ms(Delay);
-}    
-
-
-
+    delay_ms(Delay);
+}

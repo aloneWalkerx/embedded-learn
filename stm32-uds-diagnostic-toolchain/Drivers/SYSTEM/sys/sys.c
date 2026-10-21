@@ -1,26 +1,24 @@
 #include  "./SYSTEM/sys/sys.h"
 
-
 /**
  * @brief       设置中断向量表偏移地址
  * @param       baseaddr: 基地址
  * @param       offset: 偏移量
  * @retval      无
  */
-void sys_nvic_set_vector_table(uint32_t baseaddr, uint32_t offset){
-  
-    //设置NVIC的向量表偏移寄存器，VTOR低9位保留，即[8:0]保留
-  SCB->VTOR = baseaddr | (offset & (uint32_t)0xFFFFFE00);
-  
-}
+void sys_nvic_set_vector_table(uint32_t baseaddr, uint32_t offset) {
 
+    //设置NVIC的向量表偏移寄存器，VTOR低9位保留，即[8:0]保留
+    SCB->VTOR = baseaddr | (offset & (uint32_t)0xFFFFFE00);
+
+}
 
 /**
  * @brief       执行: WFI指令(执行完该指令进入低功耗状态, 等待中断唤醒)
  * @param       无
  * @retval      无
  */
-void sys_wfi_set(void){
+void sys_wfi_set(void) {
 
     __ASM volatile("wfi");
 
@@ -31,7 +29,7 @@ void sys_wfi_set(void){
  * @param       无
  * @retval      无
  */
-void sys_all_nvic_disable(void){
+void sys_all_nvic_disable(void) {
 
     __ASM volatile("cpsie i");
 
@@ -42,7 +40,7 @@ void sys_all_nvic_disable(void){
  * @param       无
  * @retval      无
  */
-void sys_all_nvic_enable(void){
+void sys_all_nvic_enable(void) {
 
     __ASM volatile("cpsie i");
 
@@ -54,7 +52,7 @@ void sys_all_nvic_enable(void){
  * @param       addr: 栈顶地址
  * @retval      无Set stack top address
  */
-void sys_set_stack_top_addr(uint32_t addr){
+void sys_set_stack_top_addr(uint32_t addr) {
 
     __set_MSP(addr);
 
@@ -65,7 +63,7 @@ void sys_set_stack_top_addr(uint32_t addr){
  * @param       无
  * @retval      无
  */
-void sys_standby_mode(void){
+void sys_standby_mode(void) {
 
     //使能电源时钟
     __HAL_RCC_PWR_CLK_ENABLE();
@@ -79,7 +77,7 @@ void sys_standby_mode(void){
  * @param       无
  * @retval      无
  */
-void sys_soft_reset(void){
+void sys_soft_reset(void) {
 
     NVIC_SystemReset();
 
@@ -114,18 +112,18 @@ void sys_soft_reset(void){
  *
  * @retval      错误代码: 0, 成功; 1, 错误;
  */
- uint8_t sys_stm32_clk_init(uint32_t plln, uint32_t pllm, uint32_t pllp, uint32_t pllq){
- 
-     //定义初始化RCC（复位与时钟控制器）返回状态，默认为0
+uint8_t sys_stm32_clk_init(uint32_t plln, uint32_t pllm, uint32_t pllp, uint32_t pllq) {
+
+    //定义初始化RCC（复位与时钟控制器）返回状态，默认为0
     HAL_StatusTypeDef ret = HAL_OK;
-    
+
     //RCC:复位与时钟控制器
     //创建震荡器实例（内部/外部震荡器，HSI,LSI,HSE,LSE）
     RCC_OscInitTypeDef rcc_osc_init = {0};
-    
+
     //创建时钟实例（SYSTEM，AHB,APB总线时钟）
     RCC_ClkInitTypeDef rcc_clk_init = {0};
-    
+
     //使能电源控制（PWR）时钟
     __HAL_RCC_PWR_CLK_ENABLE();
 
@@ -135,63 +133,63 @@ void sys_soft_reset(void){
     /* 使能HSE，并选择HSE作为PLL时钟源，配置PLL1，开启USB时钟 */
     //时钟源类型为HSE,外部高速晶振
     rcc_osc_init.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    
+
     //开启外部高速晶振
     rcc_osc_init.HSEState = RCC_HSE_ON;
-    
+
     //开启PLL锁相环
     rcc_osc_init.PLL.PLLState = RCC_PLL_ON;
-    
+
     //锁相环时钟源为外部高速晶振
     rcc_osc_init.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-    
+
     //锁相环倍频系数
     rcc_osc_init.PLL.PLLN = plln;
-    
+
     //锁相环分频系数
     rcc_osc_init.PLL.PLLM = pllm;
-    
+
     //锁相环时钟分频系数
     rcc_osc_init.PLL.PLLP = pllp;
-    
+
     //锁相环外设分频系数
     rcc_osc_init.PLL.PLLQ = pllq;
-    
+
     //初始化RCC(复位与时钟控制器)
-    ret = HAL_RCC_OscConfig(&rcc_osc_init);  
-    
+    ret = HAL_RCC_OscConfig(&rcc_osc_init);
+
     //判断初始换结果，失败可以加入自己的处理逻辑
-    if(ret != HAL_OK)
+    if (ret != HAL_OK)
     {
         return 1;
     }
 
     //初始化时钟类型，包含SYSCLK(系统时钟)，HCLK(AHB时钟)，PCLIK1(APB1时钟)，PCLK2(APB2时钟)
-    rcc_clk_init.ClockType = ( RCC_CLOCKTYPE_SYSCLK \
-                                    | RCC_CLOCKTYPE_HCLK \
-                                    | RCC_CLOCKTYPE_PCLK1 \
-                                    | RCC_CLOCKTYPE_PCLK2);
+    rcc_clk_init.ClockType = (RCC_CLOCKTYPE_SYSCLK\
+    | RCC_CLOCKTYPE_HCLK\
+    | RCC_CLOCKTYPE_PCLK1\
+    | RCC_CLOCKTYPE_PCLK2);
     //设置系统时钟时钟源为PLL（锁相环）
     rcc_clk_init.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    
+
     //设置AHB分频系数为1
     rcc_clk_init.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    
+
     //APB1分频系数为4
     rcc_clk_init.APB1CLKDivider = RCC_HCLK_DIV4;
-    
-    //APB2分频系数为2 
+
+    //APB2分频系数为2
     rcc_clk_init.APB2CLKDivider = RCC_HCLK_DIV2;
-    
+
     //根据参数配置时钟，同时设置FLASH延时周期为5WS，就是6个CPU周期
     ret = HAL_RCC_ClockConfig(&rcc_clk_init, FLASH_LATENCY_5);
-    
+
     //判断时钟设置结果，如果失败则根据自己的业务处理
-    if(ret != HAL_OK)
+    if (ret != HAL_OK)
     {
         return 1;
     }
-    
+
     // STM32F405x/407x/415x/417x Z版本的器件支持预取功能
     if (HAL_GetREVID() == 0x1001)
     {
@@ -199,9 +197,9 @@ void sys_soft_reset(void){
         __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
     }
     return 0;
- 
- }
- 
+
+}
+
  #ifdef  USE_FULL_ASSERT
 
 /**
@@ -210,11 +208,10 @@ void sys_soft_reset(void){
  *              line：指向在文件中的行数
  * @retval      无
  */
-void assert_failed(uint8_t* file, uint32_t line)
-{ 
+void assert_failed(uint8_t *file, uint32_t line)
+{
     while (1)
     {
     }
 }
 #endif
-

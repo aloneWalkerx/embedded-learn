@@ -41,17 +41,16 @@
 
 //5，定义全局变量
 //UART句柄
-extern UART_HandleTypeDef  g_uart_handle;
+extern UART_HandleTypeDef g_uart_handle;
 //定义一个接收数据以及数据状态的变量
 extern uint16_t g_can_usartx_status_data;
 //定义单次接收缓冲数组变量
-extern uint8_t  g_can_usartx_rx_buffer[CAN_USARTX_RX_BUFFER_SIZE];
+extern uint8_t g_can_usartx_rx_buffer[CAN_USARTX_RX_BUFFER_SIZE];
 //定义最大接收缓冲数组变量
-extern uint8_t  g_can_usartx_rx_buffer_max[CAN_USARTX_RX_BUFFER_MAX];
+extern uint8_t g_can_usartx_rx_buffer_max[CAN_USARTX_RX_BUFFER_MAX];
 
 //6，函数声明
 //USART初始化函数
 void can_usartx_init(uint32_t baudrate);
 
-
-#endif 
+#endif

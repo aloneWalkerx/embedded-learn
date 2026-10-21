@@ -2,11 +2,12 @@
 #include "./SYSTEM/delay/delay.h"
 #include "./BSP/LED/led.h"
 #include "./SYSTEM/usart/usart.h"
+#include "BSP/CAN/can.h"
 
 int main(void)
 {
-   
-   
+
+    uint8_t d[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     /* ① HAL 库初始化
      * 内部做：复位所有外设、初始化 Flash 接口、配置 SysTick 为 1ms 中断
      * 【必须放最前面】—— 后面的 HAL_Delay / delay 都依赖它配好的 SysTick */
@@ -38,17 +39,26 @@ int main(void)
     can_led_init();
     //初始化串口
     can_usartx_init(115200);
-  
-   while(1){
-      
-       if(g_can_usartx_status_data & 0x8000){
-           printf("\r\nSTM32 CAN基础框架准备，STM32接收数据后再发送，你发送的数据为:\r\n");
-       HAL_UART_Transmit(&g_uart_handle, g_can_usartx_rx_buffer_max, (g_can_usartx_status_data & 0x3FFF),HAL_MAX_DELAY);
-       printf("\r\n");
-          
-       g_can_usartx_status_data = 0;
-       }
+    //初始化CAN
+    CAN2_Init(CAN_500K, 1);
+
+    printf("CAN2 ready, loopback @500k\r\n");
+    //发送一帧标准数据帧
+    if (CAN2_SendStd(0x123, d, 8) == CAN_OK) {
+
+        printf("send OK\r\n");
+
+    }
+    else {
+
+        printf("send FAIL\r\n");
+
+    }
+
+    while (1) {
+
+        delay_ms(500);
+
     }
 
 }
-
