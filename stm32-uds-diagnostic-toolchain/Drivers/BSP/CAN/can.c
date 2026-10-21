@@ -156,3 +156,75 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
     // 发送请求成功返回OK
     return CAN_OK;
 }
+
+/**
+ * @brief  从 CAN2 的 FIFO0 读取一帧数据（轮询方式）
+ * @param  id:  输出参数，返回该帧的 ID（标准帧返 StdId，扩展帧返 ExtId）
+ * @param  buf: 输出参数，接收数据缓冲区（调用者需保证至少 8 字节）
+ * @param  len: 输出参数，返回该帧的数据长度（DLC）
+ * @return CAN_OK 成功读到一帧；CAN_ERR_EMPTY FIFO0 为空或读取失败
+ */
+uint8_t CAN2_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len)
+{
+    // 定义接收报文头结构体（存放ID、帧类型、长度等）
+    CAN_RxHeaderTypeDef rxHeader;
+    // 查询 FIFO0 中已填充的报文数量
+    if (HAL_CAN_GetRxFifoFillLevel(&hcan2, CAN_RX_FIFO0) == 0) {
+        // 数量为0说明没有新报文，返回空错误
+        return CAN_ERR_EMPTY;
+    }
+    // 从 FIFO0 取出一帧，头信息存入rx，数据存入buf
+    if (HAL_CAN_GetRxMessage(&hcan2, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
+        // 读取失败（极少见，如FIFO被抢空），返回空错误
+        return CAN_ERR_EMPTY;
+    }
+    // 判断该帧是标准帧（11位ID）还是扩展帧（29位ID）
+    if (rxHeader.IDE == CAN_ID_STD) {
+        // 标准帧：把 StdId 输出给调用者
+        *id = (uint16_t)rxHeader.StdId;
+    } else {
+        // 扩展帧：把 ExtId 截断为16位输出（注意会丢失高位）
+        *id = (uint16_t)rxHeader.ExtId;
+    }
+    // 输出数据长度（DLC，0~8）
+    *len = (uint8_t)rxHeader.DLC;
+    // 成功读取一帧，返回OK
+    return CAN_OK;
+}
+
+/**
+ * @brief  配置 CAN2 滤波器为"全部放行"（调试用，接收所有ID）
+ * @note   CAN2 是 CAN1 的从控制器，滤波器组从 bank14 开始，
+ *         必须通过 SlaveStartFilterBank 告诉 HAL 分界点。
+ *         32位掩码模式下，掩码全0表示不关心ID任何位 => 全部接收。
+ */
+void CAN2_Filter_AcceptAll(void)
+{
+    // 定义滤波器配置结构体并清零（避免未初始化字段）
+    CAN_FilterTypeDef canFilter = {0};
+    // 指定使用的滤波器组编号（14），CAN2 从 bank 14 起
+    canFilter.FilterBank = CAN_FILTER_BANK;
+    // 滤波模式：ID掩码模式（另一种是ID列表模式）
+    canFilter.FilterMode = CAN_FILTERMODE_IDMASK;
+    // 滤波尺度：32位（另一种是16位）
+    canFilter.FilterScale = CAN_FILTERSCALE_32BIT;
+    // ID高16位 = 0（CAN_FILTER_ALL 定义为0x0000）
+    canFilter.FilterIdHigh = CAN_FILTER_ALL;
+    // ID低16位 = 0
+    canFilter.FilterIdLow = CAN_FILTER_ALL;
+    // 掩码高16位 = 0 => 不比较ID高16位
+    canFilter.FilterMaskIdHigh = CAN_FILTER_ALL;
+    // 掩码低16位 = 0 => 不比较ID低16位（合起来：全部放行）
+    canFilter.FilterMaskIdLow = CAN_FILTER_ALL;
+    // 匹配到的报文放入 FIFO0
+    canFilter.FilterFIFOAssignment = CAN_RX_FIFO0;
+    // 使能该滤波器
+    canFilter.FilterActivation = ENABLE;
+    // 从控制器（CAN2）的滤波器起始bank = 14
+    canFilter.SlaveStartFilterBank = CAN_SLAVE_START_BANK;
+    // 调用HAL把上述配置写入CAN2滤波器
+    if (HAL_CAN_ConfigFilter(&hcan2, &canFilter) != HAL_OK) {
+        // 配置失败打印提示（调试用）
+        printf("filter FAIL\r\n");
+    }
+}

@@ -51,7 +51,7 @@
 #define CAN_125K                2
 
 /* 位时序：APB1=42MHz 时，一个位 = 84 个时钟 = 14tq x BRP */
-// 500kbps 时的预分频值（84/14=6
+// 500kbps 时的预分频值（84/14=6）
 #define CAN_PRESCALER_500K      6
 // 250kbps 时的预分频值（翻倍）
 #define CAN_PRESCALER_250K      12
@@ -97,5 +97,8 @@ extern CAN_HandleTypeDef hcan2;
 void CAN2_Init(uint8_t baud_sel, uint8_t loopback);
 //发送一帧标准数据帧
 uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len);
-
+//从 FIFO0 读一帧（轮询）
+uint8_t CAN2_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len);
+//滤波器：全部放行（调试用）
+void CAN2_Filter_AcceptAll(void);
 #endif
