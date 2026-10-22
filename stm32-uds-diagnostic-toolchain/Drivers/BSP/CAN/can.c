@@ -1,5 +1,11 @@
-#include "BSP/CAN/can.h"
+#include "./BSP/CAN/can.h"
 #include "stdio.h"
+#include "./BSP/CAN/can_test.h"
+
+volatile uint16_t g_rx_id = 0;
+volatile uint8_t g_rx_len = 0;
+volatile uint8_t g_rx_buf[8];
+volatile uint32_t g_rx_cnt = 0;
 
 // 定义CAN2的HAL句柄实体（供全工程引用）
 CAN_HandleTypeDef hcan2;
@@ -227,4 +233,77 @@ void CAN2_Filter_AcceptAll(void)
         // 配置失败打印提示（调试用）
         printf("filter FAIL\r\n");
     }
+}
+
+/**
+ * @brief  配置并使能 CAN2 接收中断
+ * @note   使能 FIFO0（First In First Out，先进先出）消息挂起（Pending）中断，
+ *         并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中设置优先级并开启。
+ *         告诉硬件"如果 FIFO0 邮箱里收到新消息了，记得敲门（触发中断）叫我"，并接通门铃。
+ */
+void CAN2_IRQ_Enable(void)
+{
+    // 激活 CAN2 的接收 FIFO0 挂起（Pending）中断。
+    if (HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+        // 如果配置失败，打印错误信息并退出
+        printf("CAN2 irq FAIL\r\n");
+        return;
+    }
+    // 设置 CAN2 接收中断的优先级为 2（数字越小优先级越高），抢占优先级为 0。
+    HAL_NVIC_SetPriority(CAN_CAN2_RX_IRQn, 2, 0);
+    // 在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中使能 CAN2 接收中断。
+    HAL_NVIC_EnableIRQ(CAN_CAN2_RX_IRQn);
+}
+
+/**
+ * @brief  CAN2 接收中断服务函数
+ * @note   当 CAN2 发生中断时，CPU（Central Processing Unit，中央处理器）自动跳转到这里。
+ *         直接调用 HAL（Hardware Abstraction Layer，硬件抽象层）库的通用中断处理函数，
+ *         由 HAL 库自动判断中断源、清除标志位，并调用相应的回调函数。
+ */
+void CAN_CAN2_RX_IRQHandler(void)
+{
+    // 调用 HAL 库的通用中断处理函数。
+    HAL_CAN_IRQHandler(&hcan2);
+}
+
+/**
+ * @brief  接收 FIFO0 挂起回调函数（Callback，回调函数）
+ * @param  hcan (CAN_HandleTypeDef *)：触发此回调函数的 CAN 句柄指针，包含了当前 CAN 控制器的状态。
+ * @note   这是 HAL 库在底层处理完中断后自动调用的函数。
+ *         将接收到的 ID（Identifier，标识符）、DLC（Data Length Code，数据长度编码）和 DATA（数据）提取出来，
+ *         保存到全局变量中供主程序使用，并对数据长度做越界保护（最大 8 字节）。
+ */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    //定义一个结构体，用来装收到的ID、长度、帧类型等
+    CAN_RxHeaderTypeDef rxHeader;
+    // 定义一个 8 字节的数组，用来装数据
+    uint8_t buf[8], i;
+
+    // 从 CAN 控制器的 FIFO0 中把消息读出来，存放到 rxHeader 结构体和 buf 数组中
+    // 如果读取失败（比如没有消息或者硬件错误），直接退出回调函数
+    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
+        return;
+    }
+
+    // 获取发送方的 ID（Identifier，标识符）。
+    // 判断是标准帧还是扩展帧：如果是标准帧(CAN_ID_STD)取 StdId(11位)，否则取 ExtId(29位)。最后强转成 16 位保存。
+    g_rx_id = (uint16_t) (rxHeader.IDE == CAN_ID_STD ? rxHeader.StdId : rxHeader.ExtId);
+
+    // 获取数据的长度 DLC（Data Length Code，数据长度编码）
+    g_rx_len = (uint8_t)rxHeader.DLC;
+
+    // 安全检查：CAN 协议规定最多 8 个字节，如果读到的长度大于 8，强制改成 8，防止数组越界（内存踩踏）
+    if (g_rx_len > 8u) {
+        g_rx_len = 8u;
+    }
+
+    // 把收到的数据从临时缓冲区 buf 复制到全局变量 g_rx_buf 中，方便主程序使用
+    for (i = 0; i < g_rx_len; i++) {
+        g_rx_buf[i] = buf[i];
+    }
+
+    // 接收计数器加 1，用于统计一共收到了多少条消息
+    g_rx_cnt++;
 }

@@ -42,6 +42,10 @@
 //使能CAN2
 #define CAN_CAN2_CLK_ENABLE()           do { __HAL_RCC_CAN2_CLK_ENABLE();}while(0)
 
+/*------------------------------中断----------------------------------*/
+#define CAN_CAN2_RX_IRQn                CAN2_RX0_IRQn
+#define CAN_CAN2_RX_IRQHandler          CAN2_RX0_IRQHandler
+
 /* -------------------------- 波特率选择 ------------------------------ */
 // 波特率选择值：500kbps
 #define CAN_500K                0
@@ -101,4 +105,7 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len);
 uint8_t CAN2_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len);
 //滤波器：全部放行（调试用）
 void CAN2_Filter_AcceptAll(void);
+//打开 FIFO0 接收中断
+void CAN2_IRQ_Enable(void);
+
 #endif
