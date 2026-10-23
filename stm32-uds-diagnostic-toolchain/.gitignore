@@ -18,6 +18,7 @@ RTE/
 *.uvoptx
 *.uvguix.*
 *.scvd
+*.iex
 
 # ===== 系统/杂项 =====
 Thumbs.db

@@ -157,8 +157,7 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
         // 添加失败返回错误
         return CAN_ERR_NOBOX;
     }
-    //打印选中的发送邮箱编号
-    printf("send mailbox number = %lu\r\n", (unsigned long)mailbox);
+
     // 发送请求成功返回OK
     return CAN_OK;
 }
@@ -306,4 +305,46 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
     // 接收计数器加 1，用于统计一共收到了多少条消息
     g_rx_cnt++;
+}
+
+/**
+ * @brief  配置 CAN2 滤波器为 32 位列表模式，放行两个标准 ID
+ * @param  id1 (uint16_t)：允许通过的第 1 个标准帧 ID（11 位，最大 0x7FF）
+ * @param  id2 (uint16_t)：允许通过的第 2 个标准帧 ID（11 位，最大 0x7FF）
+ * @note   列表模式（IDLIST）下，ID 寄存器存放的是"要匹配的 ID 本身"，而不是掩码，
+ *         硬件会逐一比对，只有等于 id1 或 id2 的帧才会被放进 FIFO0。
+ *         32 位尺度下，一个滤波器组占用 2 个 32 位寄存器（FR1、FR2），可放 2 个标准 ID。
+ *         CAN2 是从控制器，滤波器组从 bank14 开始，需通过 SlaveStartFilterBank 告知 HAL。
+ */
+void CAN2_Filter_List2(uint16_t id1, uint16_t id2)
+{
+    // 定义滤波器配置结构体并清零（避免未初始化字段影响配置）
+    CAN_FilterTypeDef canFilter = {0};
+
+    // 指定使用的滤波器组编号（CAN2 从 bank14 起）
+    canFilter.FilterBank = CAN_FILTER_BANK;
+    // 滤波模式：ID 列表模式（另一种是 ID 掩码模式 IDMASK）
+    canFilter.FilterMode = CAN_FILTERMODE_IDLIST;
+    // 滤波尺度：32 位（一个 bank 可放 2 个标准 ID 或 1 个扩展 ID）
+    canFilter.FilterScale = CAN_FILTERSCALE_32BIT;
+    // 第 1 个标准 ID 写入 FR1 高位：标准 ID 占 11 位，需左移 5 位对齐到 FR1[31:21]
+    canFilter.FilterIdHigh = (uint16_t) (((uint32_t) (id1 & CAN_STD_ID_MASK)) << 5); /* FR1 = id1 << 21 */
+    // FR1 低 16 位不使用（标准 ID 只占高 16 位的一部分），填 0
+    canFilter.FilterIdLow = CAN_FILTER_ALL;
+    // 第 2 个标准 ID 写入 FR2 高位：同样左移 5 位对齐
+    canFilter.FilterMaskIdHigh = (uint16_t) (((uint32_t) (id2 & CAN_STD_ID_MASK)) << 5); /* FR2 = id2 << 21 */
+    // FR2 低 16 位不使用，填 0
+    canFilter.FilterMaskIdLow = CAN_FILTER_ALL;
+    // 匹配到的报文放入 FIFO0
+    canFilter.FilterFIFOAssignment = CAN_RX_FIFO0;
+    // 使能该滤波器（列表模式下，ID 匹配即放行）
+    canFilter.FilterActivation = ENABLE;
+    // 从控制器（CAN2）的滤波器起始 bank = 14，告知 HAL 分界点
+    canFilter.SlaveStartFilterBank = CAN_SLAVE_START_BANK;
+
+    // 调用 HAL 把上述配置写入 CAN2 滤波器组
+    if (HAL_CAN_ConfigFilter(&hcan2, &canFilter) != HAL_OK) {
+        // 配置失败打印提示（调试用）
+        printf("filter FAIL\r\n");
+    }
 }

@@ -42,7 +42,9 @@ int main(void)
     //环回自测
     can_test_loopback();
     //正常模式
-    can_test_normal();
+    //can_test_normal();
+    //过滤指定ID
+    can_filter_list2);
     while (1) {
 
     }

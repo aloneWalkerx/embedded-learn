@@ -25,7 +25,7 @@ void can_test_loopback(void)
     uint16_t k;
 
     printf("\r\n---- 环回自测 ----\r\n");
-    
+
     //初始化CAN
     CAN2_Init(CAN_500K, 1);
     // 配置滤波器为全部放行（环回时也要过滤波器才能收到）
@@ -85,6 +85,58 @@ void can_test_normal(void)
 
     // 配置 CAN2 的接收过滤器，全部放行（接收总线上所有的 ID 报文）
     CAN2_Filter_AcceptAll();
+
+    // 使能 CAN2 的 FIFO0 接收中断，并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中开启
+    CAN2_IRQ_Enable();
+
+    // 进入主循环，程序将一直在这里面运行
+    while (1) {
+        // 填充发送数据：每个字节的值 = 当前 tick 值 + 字节索引（0~7）
+        for (i = 0; i < 8; i++) {
+            buf[i] = (uint8_t) (tick + i);
+        }
+
+        // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 TEST_TX_ID（通常是 0x123）
+        CAN2_SendStd(TEST_TX_ID, buf, 8);
+
+        // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
+        delay_ms(TEST_PERIOD_MS);
+
+        // 发送完一帧后，tick 加 1，为下一轮生成不同的数据内容
+        tick++;
+
+        // 检查全局接收计数器 g_rx_cnt 是否发生变化（说明中断里收到了新数据）
+        if (g_rx_cnt != last_cnt) {                 /* 主循环只轮询标志，不在中断里打印 */
+            // 更新 last_cnt，以免重复打印同一条数据
+            last_cnt = g_rx_cnt;
+
+            // 打印接收到的报文信息：ID（Identifier，标识符）、DLC（Data Length Code，数据长度）、首字节数据和总计接收数
+            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_rx_id, g_rx_len, g_rx_buf[0],
+            (unsigned long)g_rx_cnt);
+        }
+    }
+}
+
+// 过滤指定ID
+void can_filter_list2()
+{
+    // 定义一个 8 字节的数组，用于存放即将发送的数据
+    uint8_t buf[8];
+    // 循环变量，用于遍历数组
+    uint8_t i;
+    // 计数器，每次循环加 1，用于生成递增的测试数据
+    uint16_t tick = 0;
+    // 记录上一次接收到的报文总数，用于比对是否有新数据
+    uint32_t last_cnt = 0;
+
+    printf("\r\n---- 列表模式（中断收帧）----\r\n");
+
+    // 初始化 CAN2 为 500K 波特率（Baud Rate，通信速率），参数 0 表示正常模式（非环回模式）
+    //0 = 正常模式
+    CAN2_Init(CAN_500K, 0);
+
+    // 配置 CAN2 的接收过滤器，只放行指定的ID
+    CAN2_Filter_List2(0x7E0, 0x7DF);
 
     // 使能 CAN2 的 FIFO0 接收中断，并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中开启
     CAN2_IRQ_Enable();

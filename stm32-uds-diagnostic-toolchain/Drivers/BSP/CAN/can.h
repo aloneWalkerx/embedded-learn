@@ -107,5 +107,7 @@ uint8_t CAN2_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len);
 void CAN2_Filter_AcceptAll(void);
 //打开 FIFO0 接收中断
 void CAN2_IRQ_Enable(void);
+//滤波器：32 位列表模式，放行两个 ID
+void CAN2_Filter_List2(uint16_t id1, uint16_t id2);
 
 #endif

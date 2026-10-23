@@ -29,5 +29,7 @@ extern volatile uint32_t g_rx_cnt;
 void can_test_loopback(void);
 //正常模式
 void can_test_normal(void);
+//过滤指定ID
+void can_filter_list2();
 
 #endif
