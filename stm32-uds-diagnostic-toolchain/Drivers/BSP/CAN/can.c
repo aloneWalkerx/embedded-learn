@@ -2,14 +2,19 @@
 #include "stdio.h"
 #include "./BSP/CAN/can_test.h"
 
-volatile uint16_t g_rx_id = 0;
-volatile uint8_t g_rx_len = 0;
-volatile uint8_t g_rx_buf[8];
-volatile uint32_t g_rx_cnt = 0;
+volatile uint16_t g_can2_rx_id;                     /* CAN2 收到的 */
+volatile uint8_t g_can2_rx_len;
+volatile uint8_t g_can2_rx_buf[8];
+volatile uint32_t g_can2_rx_cnt;
+
+volatile uint16_t g_can1_rx_id;                     /* CAN1 收到的 */
+volatile uint8_t g_can1_rx_len;
+volatile uint8_t g_can1_rx_buf[8];
+volatile uint32_t g_can1_rx_cnt;
 
 // 定义CAN2的HAL句柄实体（供全工程引用）
 CAN_HandleTypeDef hcan2;
-
+CAN_HandleTypeDef hcan1;
 /**
  * @brief  CAN2初始化（时钟、引脚、位时序、启动）
  * @param  baud_sel: 波特率选择（CAN_500K / CAN_250K / CAN_125K）
@@ -31,7 +36,7 @@ void CAN2_Init(uint8_t baud_sel, uint8_t loopback)
     default: presc = CAN_PRESCALER_500K; break;
     }
     // 指定外设实例为CAN2
-    hcan2.Instance = CAN_CANX;
+    hcan2.Instance = CAN2;
     // 设置预分频值
     hcan2.Init.Prescaler = presc;
     // 回环或正常模式
@@ -81,6 +86,42 @@ void CAN2_Init(uint8_t baud_sel, uint8_t loopback)
     // 否则125k/默认500k
     (baud_sel == CAN_125K) ? "125k" : "500k");
 }
+/* ============================================================
+ * CAN1 初始化（双节点自检用：PB8/PB9）
+ * ============================================================ */
+void CAN1_Init(uint8_t baud_sel, uint8_t loopback)
+{
+    uint32_t presc;
+
+    switch (baud_sel) {
+    case CAN_250K: presc = CAN_PRESCALER_250K; break;
+    case CAN_125K: presc = CAN_PRESCALER_125K; break;
+    default: presc = CAN_PRESCALER_500K; break;
+    }
+
+    hcan1.Instance = CAN1;
+    hcan1.Init.Prescaler = presc;
+    hcan1.Init.Mode = loopback ? CAN_MODE_LOOPBACK : CAN_MODE_NORMAL;
+    hcan1.Init.SyncJumpWidth = CAN_SJW_TQ;
+    hcan1.Init.TimeSeg1 = CAN_BS1_TQ;
+    hcan1.Init.TimeSeg2 = CAN_BS2_TQ;
+    hcan1.Init.TimeTriggeredMode = DISABLE;
+    hcan1.Init.AutoBusOff = ENABLE;
+    hcan1.Init.AutoWakeUp = DISABLE;
+    hcan1.Init.AutoRetransmission = ENABLE;
+    hcan1.Init.ReceiveFifoLocked = DISABLE;
+    hcan1.Init.TransmitFifoPriority = DISABLE;
+
+    if (HAL_CAN_Init(&hcan1) != HAL_OK) {
+        printf("CAN1 init FAIL\r\n");
+        return;
+    }
+    if (HAL_CAN_Start(&hcan1) != HAL_OK) {
+        printf("CAN1 start FAIL\r\n");
+        return;
+    }
+    printf("CAN1 ready (HAL), %s @500k\r\n", loopback ? "loopback" : "normal");
+}
 
 /**
  * @brief  CAN外设MSP初始化（HAL在HAL_CAN_Init内部自动回调）
@@ -91,19 +132,43 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 {
     // 定义GPIO初始化结构体并清零
     GPIO_InitTypeDef gpio_init = {0};
+
+    // 判断是否为CAN2实例
+    if (hcan->Instance == CAN1) {
+        // 使能GPIOA时钟（PA11/PA12需要）
+        CAN2_GPIO_PORT_CLK_ENABLE();
+        //使能CAN1时钟
+        CAN1_CLK_ENABLE();
+        // 同时配置接收和发送引脚,PB12=RX, PB13=TX
+        gpio_init.Pin = CAN1_GPIO_TX_PIN | CAN1_GPIO_RX_PIN;
+        // 复用推挽输出模式
+        gpio_init.Mode = GPIO_MODE_AF_PP;
+        //上拉（CAN RX通常需要上拉）
+        gpio_init.Pull = GPIO_PULLUP;
+        // 最高速度档（对应OSPEEDR=11）
+        gpio_init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+        // 复用功能选择AF9（CAN2）
+        gpio_init.Alternate = CAN1_GPIO_AF;
+        // 按上述参数初始化GPIOB
+        HAL_GPIO_Init(CAN1_GPIO_PORT, &gpio_init);
+
+        // 不是CAN2则直接返回（本驱动只处理CAN2）
+        return;
+    }
+
     // 判断是否为CAN2实例
     if (hcan->Instance != CAN2) {
         // 不是CAN2则直接返回（本驱动只处理CAN2）
         return;
     }
     // 使能GPIOB时钟（PB12/PB13需要）
-    CAN_GPIO_PORT_CLK_ENABLE();
+    CAN2_GPIO_PORT_CLK_ENABLE();
     //使能CAN1时钟（CAN2从控制器依赖CAN1主控制器的时钟）,只用 CAN2 也必须开
-    CAN_CAN1_CLK_ENABLE();
+    CAN1_CLK_ENABLE();
     // 使能CAN2时钟
-    CAN_CAN2_CLK_ENABLE();
+    CAN2_CLK_ENABLE();
     // 同时配置接收和发送引脚,PB12=RX, PB13=TX
-    gpio_init.Pin = CAN_GPIO_TX_PIN | CAN_GPIO_RX_PIN;
+    gpio_init.Pin = CAN2_GPIO_TX_PIN | CAN2_GPIO_RX_PIN;
     // 复用推挽输出模式
     gpio_init.Mode = GPIO_MODE_AF_PP;
     //上拉（CAN RX通常需要上拉）
@@ -111,9 +176,10 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
     // 最高速度档（对应OSPEEDR=11）
     gpio_init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     // 复用功能选择AF9（CAN2）
-    gpio_init.Alternate = CAN_GPIO_AF;
+    gpio_init.Alternate = CAN2_GPIO_AF;
     // 按上述参数初始化GPIOB
-    HAL_GPIO_Init(GPIOB, &gpio_init);
+    HAL_GPIO_Init(CAN2_GPIO_PORT, &gpio_init);
+
 }
 
 /**
@@ -162,6 +228,31 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
     return CAN_OK;
 }
 
+uint8_t CAN1_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
+{
+    CAN_TxHeaderTypeDef tx;
+    uint32_t mailbox;
+
+    if (len > CAN_DLC_MAX) {
+        return CAN_ERR_PARAM;
+    }
+    if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) {
+        return CAN_ERR_NOBOX;
+    }
+
+    tx.StdId = (uint32_t) (id & CAN_STD_ID_MASK);
+    tx.ExtId = 0;
+    tx.IDE = CAN_ID_STD;
+    tx.RTR = CAN_RTR_DATA;
+    tx.DLC = len;
+    tx.TransmitGlobalTime = DISABLE;
+
+    if (HAL_CAN_AddTxMessage(&hcan1, &tx, buf, &mailbox) != HAL_OK) {
+        return CAN_ERR_NOBOX;
+    }
+    return CAN_OK;
+}
+
 /**
  * @brief  从 CAN2 的 FIFO0 读取一帧数据（轮询方式）
  * @param  id:  输出参数，返回该帧的 ID（标准帧返 StdId，扩展帧返 ExtId）
@@ -194,6 +285,26 @@ uint8_t CAN2_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len)
     // 输出数据长度（DLC，0~8）
     *len = (uint8_t)rxHeader.DLC;
     // 成功读取一帧，返回OK
+    return CAN_OK;
+}
+
+uint8_t CAN1_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len)
+{
+    CAN_RxHeaderTypeDef rx;
+
+    if (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) == 0) {
+        return CAN_ERR_EMPTY;
+    }
+    if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rx, buf) != HAL_OK) {
+        return CAN_ERR_EMPTY;
+    }
+
+    if (rx.IDE == CAN_ID_STD) {
+        *id = (uint16_t)rx.StdId;
+    } else {
+        *id = (uint16_t)rx.ExtId;
+    }
+    *len = (uint8_t)rx.DLC;
     return CAN_OK;
 }
 
@@ -234,6 +345,26 @@ void CAN2_Filter_AcceptAll(void)
     }
 }
 
+void CAN1_Filter_AcceptAll(void)
+{
+    CAN_FilterTypeDef f = {0};
+
+    f.FilterBank = CAN1_FILTER_BANK;                /* CAN1 从 bank 0 起 */
+    f.FilterMode = CAN_FILTERMODE_IDMASK;
+    f.FilterScale = CAN_FILTERSCALE_32BIT;
+    f.FilterIdHigh = CAN_FILTER_ALL;
+    f.FilterIdLow = CAN_FILTER_ALL;
+    f.FilterMaskIdHigh = CAN_FILTER_ALL;
+    f.FilterMaskIdLow = CAN_FILTER_ALL;
+    f.FilterFIFOAssignment = CAN_RX_FIFO0;
+    f.FilterActivation = ENABLE;
+    f.SlaveStartFilterBank = CAN_SLAVE_START_BANK;  /* CAN2 的分界仍写 14 */
+
+    if (HAL_CAN_ConfigFilter(&hcan1, &f) != HAL_OK) {
+        printf("CAN1 filter FAIL\r\n");
+    }
+}
+
 /**
  * @brief  配置并使能 CAN2 接收中断
  * @note   使能 FIFO0（First In First Out，先进先出）消息挂起（Pending）中断，
@@ -249,9 +380,19 @@ void CAN2_IRQ_Enable(void)
         return;
     }
     // 设置 CAN2 接收中断的优先级为 2（数字越小优先级越高），抢占优先级为 0。
-    HAL_NVIC_SetPriority(CAN_CAN2_RX_IRQn, 2, 0);
+    HAL_NVIC_SetPriority(CAN2_RX0_IRQn, 2, 0);
     // 在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中使能 CAN2 接收中断。
-    HAL_NVIC_EnableIRQ(CAN_CAN2_RX_IRQn);
+    HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
+}
+
+void CAN1_IRQ_Enable(void)
+{
+    if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+        printf("CAN1 irq FAIL\r\n");
+        return;
+    }
+    HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 }
 
 /**
@@ -260,10 +401,15 @@ void CAN2_IRQ_Enable(void)
  *         直接调用 HAL（Hardware Abstraction Layer，硬件抽象层）库的通用中断处理函数，
  *         由 HAL 库自动判断中断源、清除标志位，并调用相应的回调函数。
  */
-void CAN_CAN2_RX_IRQHandler(void)
+void CAN2_RX0_IRQHandler(void)
 {
     // 调用 HAL 库的通用中断处理函数。
     HAL_CAN_IRQHandler(&hcan2);
+}
+
+void CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan1);
 }
 
 /**
@@ -273,38 +419,109 @@ void CAN_CAN2_RX_IRQHandler(void)
  *         将接收到的 ID（Identifier，标识符）、DLC（Data Length Code，数据长度编码）和 DATA（数据）提取出来，
  *         保存到全局变量中供主程序使用，并对数据长度做越界保护（最大 8 字节）。
  */
+//void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+//{
+//    //定义一个结构体，用来装收到的ID、长度、帧类型等
+//    CAN_RxHeaderTypeDef rxHeader;
+//    // 定义一个 8 字节的数组，用来装数据
+//    uint8_t buf[8], i;
+
+//    // 从 CAN 控制器的 FIFO0 中把消息读出来，存放到 rxHeader 结构体和 buf 数组中
+//    // 如果读取失败（比如没有消息或者硬件错误），直接退出回调函数
+//    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
+//        return;
+//    }
+
+//    // 获取发送方的 ID（Identifier，标识符）。
+//    // 判断是标准帧还是扩展帧：如果是标准帧(CAN_ID_STD)取 StdId(11位)，否则取 ExtId(29位)。最后强转成 16 位保存。
+//    g_rx_id = (uint16_t) (rxHeader.IDE == CAN_ID_STD ? rxHeader.StdId : rxHeader.ExtId);
+
+//    // 获取数据的长度 DLC（Data Length Code，数据长度编码）
+//    g_rx_len = (uint8_t)rxHeader.DLC;
+
+//    // 安全检查：CAN 协议规定最多 8 个字节，如果读到的长度大于 8，强制改成 8，防止数组越界（内存踩踏）
+//    if (g_rx_len > 8u) {
+//        g_rx_len = 8u;
+//    }
+
+//    // 把收到的数据从临时缓冲区 buf 复制到全局变量 g_rx_buf 中，方便主程序使用
+//    for (i = 0; i < g_rx_len; i++) {
+//        g_rx_buf[i] = buf[i];
+//    }
+
+//    // 接收计数器加 1，用于统计一共收到了多少条消息
+//    g_rx_cnt++;
+//}
+
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    //定义一个结构体，用来装收到的ID、长度、帧类型等
-    CAN_RxHeaderTypeDef rxHeader;
-    // 定义一个 8 字节的数组，用来装数据
-    uint8_t buf[8], i;
 
-    // 从 CAN 控制器的 FIFO0 中把消息读出来，存放到 rxHeader 结构体和 buf 数组中
-    // 如果读取失败（比如没有消息或者硬件错误），直接退出回调函数
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
-        return;
+    if (hcan->Instance == CAN1) {
+        //定义一个结构体，用来装收到的ID、长度、帧类型等
+        CAN_RxHeaderTypeDef rxHeader;
+        // 定义一个 8 字节的数组，用来装数据
+        uint8_t buf[8], i;
+
+        // 从 CAN 控制器的 FIFO0 中把消息读出来，存放到 rxHeader 结构体和 buf 数组中
+        // 如果读取失败（比如没有消息或者硬件错误），直接退出回调函数
+        if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
+            return;
+        }
+
+        // 获取发送方的 ID（Identifier，标识符）。
+        // 判断是标准帧还是扩展帧：如果是标准帧(CAN_ID_STD)取 StdId(11位)，否则取 ExtId(29位)。最后强转成 16 位保存。
+        g_can1_rx_id = (uint16_t) (rxHeader.IDE == CAN_ID_STD ? rxHeader.StdId : rxHeader.ExtId);
+
+        // 获取数据的长度 DLC（Data Length Code，数据长度编码）
+        g_can1_rx_len = (uint8_t)rxHeader.DLC;
+
+        // 安全检查：CAN 协议规定最多 8 个字节，如果读到的长度大于 8，强制改成 8，防止数组越界（内存踩踏）
+        if (g_can1_rx_len > 8u) {
+            g_can1_rx_len = 8u;
+        }
+
+        // 把收到的数据从临时缓冲区 buf 复制到全局变量 g_rx_buf 中，方便主程序使用
+        for (i = 0; i < g_can1_rx_len; i++) {
+            g_can1_rx_buf[i] = buf[i];
+        }
+
+        // 接收计数器加 1，用于统计一共收到了多少条消息
+        g_can1_rx_cnt++;
     }
 
-    // 获取发送方的 ID（Identifier，标识符）。
-    // 判断是标准帧还是扩展帧：如果是标准帧(CAN_ID_STD)取 StdId(11位)，否则取 ExtId(29位)。最后强转成 16 位保存。
-    g_rx_id = (uint16_t) (rxHeader.IDE == CAN_ID_STD ? rxHeader.StdId : rxHeader.ExtId);
+    if (hcan->Instance == CAN2) {
+        //定义一个结构体，用来装收到的ID、长度、帧类型等
+        CAN_RxHeaderTypeDef rxHeader;
+        // 定义一个 8 字节的数组，用来装数据
+        uint8_t buf[8], i;
 
-    // 获取数据的长度 DLC（Data Length Code，数据长度编码）
-    g_rx_len = (uint8_t)rxHeader.DLC;
+        // 从 CAN 控制器的 FIFO0 中把消息读出来，存放到 rxHeader 结构体和 buf 数组中
+        // 如果读取失败（比如没有消息或者硬件错误），直接退出回调函数
+        if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, buf) != HAL_OK) {
+            return;
+        }
 
-    // 安全检查：CAN 协议规定最多 8 个字节，如果读到的长度大于 8，强制改成 8，防止数组越界（内存踩踏）
-    if (g_rx_len > 8u) {
-        g_rx_len = 8u;
+        // 获取发送方的 ID（Identifier，标识符）。
+        // 判断是标准帧还是扩展帧：如果是标准帧(CAN_ID_STD)取 StdId(11位)，否则取 ExtId(29位)。最后强转成 16 位保存。
+        g_can2_rx_id = (uint16_t) (rxHeader.IDE == CAN_ID_STD ? rxHeader.StdId : rxHeader.ExtId);
+
+        // 获取数据的长度 DLC（Data Length Code，数据长度编码）
+        g_can2_rx_len = (uint8_t)rxHeader.DLC;
+
+        // 安全检查：CAN 协议规定最多 8 个字节，如果读到的长度大于 8，强制改成 8，防止数组越界（内存踩踏）
+        if (g_can2_rx_len > 8u) {
+            g_can2_rx_len = 8u;
+        }
+
+        // 把收到的数据从临时缓冲区 buf 复制到全局变量 g_rx_buf 中，方便主程序使用
+        for (i = 0; i < g_can2_rx_len; i++) {
+            g_can2_rx_buf[i] = buf[i];
+        }
+
+        // 接收计数器加 1，用于统计一共收到了多少条消息
+        g_can2_rx_cnt++;
     }
 
-    // 把收到的数据从临时缓冲区 buf 复制到全局变量 g_rx_buf 中，方便主程序使用
-    for (i = 0; i < g_rx_len; i++) {
-        g_rx_buf[i] = buf[i];
-    }
-
-    // 接收计数器加 1，用于统计一共收到了多少条消息
-    g_rx_cnt++;
 }
 
 /**
@@ -347,4 +564,45 @@ void CAN2_Filter_List2(uint16_t id1, uint16_t id2)
         // 配置失败打印提示（调试用）
         printf("filter FAIL\r\n");
     }
+}
+
+/**
+ * @brief  打印 CAN2 的错误状态（TEC/REC/LEC/BOFF 及 HAL 错误码与状态）
+ * @note   直接读 ESR 寄存器（Error Status Register），提取：
+ *         - TEC：发送错误计数器（Transmit Error Counter，bit7:0）
+ *         - REC：接收错误计数器（Receive Error Counter，bit23:16）
+ *         - LEC：最后错误代码（Last Error Code，bit6:4）
+ *         - BOFF：Bus-Off 标志（bit2）
+ *         同时调用 HAL 接口获取累计错误码与当前状态机状态。
+ */
+void CAN2_PrintStatus(void)
+{
+    // 读取 CAN2 的 ESR（错误状态寄存器）快照，避免多次访问寄存器
+    uint32_t esr = hcan2.Instance->ESR;
+
+    // 打印一行：TEC、REC、LEC、BOFF，以及 HAL 错误码和状态
+    printf("TEC=%lu REC=%lu LEC=%lu BOFF=%lu | ERR=0x%08lX STATE=%d\r\n",
+    // ESR[7:0]  = TEC 发送错误计数器（0~255）
+    (unsigned long) (esr & 0xFFu),
+    // ESR[23:16] = REC 接收错误计数器（0~255）
+    (unsigned long) ((esr >> 16) & 0xFFu),
+    // ESR[6:4]  = LEC 最后错误代码（0~7，3位）
+    (unsigned long) ((esr >> 4) & 0x7u),
+    // ESR[2]    = BOFF Bus-Off 标志（1 表示已进入 Bus-Off）
+    (unsigned long) ((esr >> 2) & 0x1u),
+    // HAL_CAN_GetError() 返回累计的 HAL 错误标志（位掩码）
+    (unsigned long)HAL_CAN_GetError(&hcan2),
+    // HAL_CAN_GetState() 返回 CAN 状态机状态（READY/BUSY/ERROR 等）
+    (int)HAL_CAN_GetState(&hcan2));
+}
+
+void CAN1_PrintStatus(void)
+{
+    uint32_t esr = hcan1.Instance->ESR;
+
+    printf("CAN1 TEC=%lu REC=%lu LEC=%lu BOFF=%lu\r\n",
+    (unsigned long) (esr & 0xFFu),
+    (unsigned long) ((esr >> 16) & 0xFFu),
+    (unsigned long) ((esr >> 4) & 0x7u),
+    (unsigned long) ((esr >> 2) & 0x1u));
 }

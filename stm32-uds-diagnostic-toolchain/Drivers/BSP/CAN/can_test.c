@@ -38,7 +38,7 @@ void can_test_loopback(void)
             buf[i] = (uint8_t) (k + i);
         }
         // 发送一帧标准数据帧（ID=TEST_TX_ID，8字节）
-        if (CAN2_SendStd(TEST_TX_ID, buf, CAN_DLC_MAX) != CAN_OK) {
+        if (CAN2_SendStd(CAN2_TEST_TX_ID, buf, CAN_DLC_MAX) != CAN_OK) {
             // 发送失败打印序号
             printf("send fail at %u\r\n", k);
             // 本帧失败，跳过接收，进入下一帧
@@ -49,7 +49,7 @@ void can_test_loopback(void)
         // 尝试从FIFO0读一帧回来
         if (CAN2_RecvStd(&id, buf, &len) == CAN_OK) {
             // 校验：ID、长度、首字节，3项全对才算通过
-            if ((id == TEST_TX_ID) && (len == CAN_DLC_MAX) && (buf[0] == k)) {
+            if ((id == CAN2_TEST_TX_ID) && (len == CAN_DLC_MAX) && (buf[0] == k)) {
                 // 三项校验全通过，成功计数加1
                 ok++;
             }
@@ -97,7 +97,7 @@ void can_test_normal(void)
         }
 
         // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 TEST_TX_ID（通常是 0x123）
-        CAN2_SendStd(TEST_TX_ID, buf, 8);
+        CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
 
         // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(TEST_PERIOD_MS);
@@ -106,13 +106,13 @@ void can_test_normal(void)
         tick++;
 
         // 检查全局接收计数器 g_rx_cnt 是否发生变化（说明中断里收到了新数据）
-        if (g_rx_cnt != last_cnt) {                 /* 主循环只轮询标志，不在中断里打印 */
+        if (g_can2_rx_cnt != last_cnt) {            /* 主循环只轮询标志，不在中断里打印 */
             // 更新 last_cnt，以免重复打印同一条数据
-            last_cnt = g_rx_cnt;
+            last_cnt = g_can2_rx_cnt;
 
             // 打印接收到的报文信息：ID（Identifier，标识符）、DLC（Data Length Code，数据长度）、首字节数据和总计接收数
-            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_rx_id, g_rx_len, g_rx_buf[0],
-            (unsigned long)g_rx_cnt);
+            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_can2_rx_id, g_can2_rx_len, g_can2_rx_buf[0],
+            (unsigned long)g_can2_rx_cnt);
         }
     }
 }
@@ -149,7 +149,7 @@ void can_filter_list2()
         }
 
         // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 TEST_TX_ID（通常是 0x123）
-        CAN2_SendStd(TEST_TX_ID, buf, 8);
+        CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
 
         // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(TEST_PERIOD_MS);
@@ -158,13 +158,75 @@ void can_filter_list2()
         tick++;
 
         // 检查全局接收计数器 g_rx_cnt 是否发生变化（说明中断里收到了新数据）
-        if (g_rx_cnt != last_cnt) {                 /* 主循环只轮询标志，不在中断里打印 */
+        if (g_can2_rx_cnt != last_cnt) {            /* 主循环只轮询标志，不在中断里打印 */
             // 更新 last_cnt，以免重复打印同一条数据
-            last_cnt = g_rx_cnt;
+            last_cnt = g_can2_rx_cnt;
 
             // 打印接收到的报文信息：ID（Identifier，标识符）、DLC（Data Length Code，数据长度）、首字节数据和总计接收数
-            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_rx_id, g_rx_len, g_rx_buf[0],
-            (unsigned long)g_rx_cnt);
+            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_can2_rx_id, g_can2_rx_len, g_can2_rx_buf[0],
+            (unsigned long)g_can2_rx_cnt);
+        }
+    }
+}
+
+/* ============================================================
+ * 第二关：三节点自检（CAN1 ? CAN2 互发，分析仪旁听）
+ * ============================================================ */
+void can_node_test(void)
+{
+    uint8_t buf[8];
+    uint8_t i;
+    uint32_t tick = 0;
+    uint32_t last1 = 0, last2 = 0;
+    uint32_t esr1, esr2;
+
+    printf("\r\n---- 三节点自检（CAN1 -> 0x%03X，CAN2 -> 0x%03X）----\r\n",
+    (unsigned)CAN1_TEST_TX_ID, (unsigned)CAN2_TEST_TX_ID);
+
+    CAN2_Init(CAN_500K, 0);                         /* 节点1：正常模式 */
+    CAN1_Init(CAN_500K, 0);                         /* 节点2：正常模式 */
+    CAN2_Filter_AcceptAll();
+    CAN1_Filter_AcceptAll();
+    CAN2_IRQ_Enable();
+    CAN1_IRQ_Enable();
+
+    while (1) {
+        /* 节点2 发 → 节点1 和分析仪收 */
+        for (i = 0; i < 8; i++) {
+            buf[i] = (uint8_t) (tick + i);
+        }
+        CAN1_SendStd(CAN1_TEST_TX_ID, buf, 8);
+        delay_ms(200);
+
+        /* 节点1 发 → 节点2 和分析仪收 */
+        for (i = 0; i < 8; i++) {
+            buf[i] = (uint8_t) (tick + 0x80 + i);
+        }
+        CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
+        delay_ms(200);
+
+        tick++;
+
+        if (last2 != g_can2_rx_cnt) {
+            last2 = g_can2_rx_cnt;
+            printf("CAN2 RX id=0x%03X d0=%02X cnt=%lu\r\n",
+            (unsigned)g_can2_rx_id, (unsigned)g_can2_rx_buf[0],
+            (unsigned long)g_can2_rx_cnt);
+        }
+        if (last1 != g_can1_rx_cnt) {
+            last1 = g_can1_rx_cnt;
+            printf("CAN1 RX id=0x%03X d0=%02X cnt=%lu\r\n",
+            (unsigned)g_can1_rx_id, (unsigned)g_can1_rx_buf[0],
+            (unsigned long)g_can1_rx_cnt);
+        }
+        if ((tick % 5u) == 0u) {
+            esr1 = hcan1.Instance->ESR;
+            esr2 = hcan2.Instance->ESR;
+            printf("[%lu] CAN1 TEC=%lu REC=%lu | CAN2 TEC=%lu REC=%lu | rx1=%lu rx2=%lu\r\n",
+            (unsigned long)tick,
+            (unsigned long) (esr1 & 0xFFu), (unsigned long) ((esr1 >> 16) & 0xFFu),
+            (unsigned long) (esr2 & 0xFFu), (unsigned long) ((esr2 >> 16) & 0xFFu),
+            (unsigned long)g_can1_rx_cnt, (unsigned long)g_can2_rx_cnt);
         }
     }
 }

@@ -24,27 +24,21 @@
 
 /* --------------------------- 引脚定义 ------------------------------- */
 // CAN2 所用GPIO端口为GPIOB
-#define CAN_GPIO_PORT                   GPIOB
+#define CAN2_GPIO_PORT                   GPIOB
 // CAN2 接收引脚为PB12
-#define CAN_GPIO_RX_PIN                 GPIO_PIN_12
+#define CAN2_GPIO_RX_PIN                 GPIO_PIN_12
 // CAN2 发送引脚为PB13
-#define CAN_GPIO_TX_PIN                 GPIO_PIN_13
+#define CAN2_GPIO_TX_PIN                 GPIO_PIN_13
 // 引脚复用功能选择AF9（对应CAN2）
-#define CAN_GPIO_AF                     GPIO_AF9_CAN2
-//具体对应的CAN
-#define CAN_CANX                        CAN2
+#define CAN2_GPIO_AF                     GPIO_AF9_CAN2
 
 /* --------------------------- 使能时钟 ------------------------------- */
 //使能GPIOB时钟
-#define CAN_GPIO_PORT_CLK_ENABLE()      do { __HAL_RCC_GPIOB_CLK_ENABLE();}while(0)
+#define CAN2_GPIO_PORT_CLK_ENABLE()      do { __HAL_RCC_GPIOB_CLK_ENABLE();}while(0)
 //使能CAN1
-#define CAN_CAN1_CLK_ENABLE()           do { __HAL_RCC_CAN1_CLK_ENABLE();}while(0)
+#define CAN1_CLK_ENABLE()           do { __HAL_RCC_CAN1_CLK_ENABLE();}while(0)
 //使能CAN2
-#define CAN_CAN2_CLK_ENABLE()           do { __HAL_RCC_CAN2_CLK_ENABLE();}while(0)
-
-/*------------------------------中断----------------------------------*/
-#define CAN_CAN2_RX_IRQn                CAN2_RX0_IRQn
-#define CAN_CAN2_RX_IRQHandler          CAN2_RX0_IRQHandler
+#define CAN2_CLK_ENABLE()           do { __HAL_RCC_CAN2_CLK_ENABLE();}while(0)
 
 /* -------------------------- 波特率选择 ------------------------------ */
 // 波特率选择值：500kbps
@@ -109,5 +103,23 @@ void CAN2_Filter_AcceptAll(void);
 void CAN2_IRQ_Enable(void);
 //滤波器：32 位列表模式，放行两个 ID
 void CAN2_Filter_List2(uint16_t id1, uint16_t id2);
+//打印 TEC/REC/LEC/BOFF
+void CAN2_PrintStatus(void);
+
+/* ---------------- CAN1（双节点自检用） ---------------------------- */
+#define CAN1_GPIO_PORT          GPIOA
+#define CAN1_GPIO_RX_PIN        GPIO_PIN_11         /* PA11  = CAN1_RX (AF9) */
+#define CAN1_GPIO_TX_PIN        GPIO_PIN_12         /* PA12  = CAN1_TX (AF9) */
+#define CAN1_GPIO_AF            GPIO_AF9_CAN1
+#define CAN1_FILTER_BANK        0                   /* CAN1 的滤波器 bank 0~13 */
+
+extern CAN_HandleTypeDef hcan1;
+
+void CAN1_Init(uint8_t baud_sel, uint8_t loopback); /* 初始化 CAN1 */
+uint8_t CAN1_SendStd(uint16_t id, uint8_t *buf, uint8_t len); /* CAN1 发一帧 */
+uint8_t CAN1_RecvStd(uint16_t *id, uint8_t *buf, uint8_t *len); /* CAN1 轮询收一帧 */
+void CAN1_Filter_AcceptAll(void);                   /* CAN1 滤波器全放行 */
+void CAN1_IRQ_Enable(void);                         /* CAN1 接收中断 */
+void CAN1_PrintStatus(void);                        /* CAN1 的 TEC/REC */
 
 #endif
