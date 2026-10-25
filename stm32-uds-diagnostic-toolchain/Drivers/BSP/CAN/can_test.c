@@ -148,7 +148,7 @@ void can_filter_list2()
             buf[i] = (uint8_t) (tick + i);
         }
 
-        // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 TEST_TX_ID（通常是 0x123）
+        // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 CAN2_TEST_TX_ID 0x112）
         CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
 
         // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
@@ -169,64 +169,94 @@ void can_filter_list2()
     }
 }
 
-/* ============================================================
- * 第二关：三节点自检（CAN1 ? CAN2 互发，分析仪旁听）
- * ============================================================ */
+//三节点测试
 void can_node_test(void)
 {
+    // 定义一个 8 字节的数组，用于存放即将发送的数据
     uint8_t buf[8];
+    // 循环变量，用于遍历数组
     uint8_t i;
+    // 计数器，每次循环加 1，用于生成递增的测试数据
     uint32_t tick = 0;
+    // 记录上一次接收到的报文总数，用于比对是否有新数据,last1对应CAN1,last2对应CAN2
     uint32_t last1 = 0, last2 = 0;
+    //CAN1，CAN2的错误状态寄存器
     uint32_t esr1, esr2;
 
     printf("\r\n---- 三节点自检（CAN1 -> 0x%03X，CAN2 -> 0x%03X）----\r\n",
     (unsigned)CAN1_TEST_TX_ID, (unsigned)CAN2_TEST_TX_ID);
-
-    CAN2_Init(CAN_500K, 0);                         /* 节点1：正常模式 */
-    CAN1_Init(CAN_500K, 0);                         /* 节点2：正常模式 */
+    //初始化CAN2正常模式
+    CAN2_Init(CAN_500K, 0);
+    //初始化CAN1正常模式
+    CAN1_Init(CAN_500K, 0);
+    //CAN2滤波器
     CAN2_Filter_AcceptAll();
+    //CAN1滤波器
     CAN1_Filter_AcceptAll();
+    // 使能 CAN2 的 FIFO0 接收中断，并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中开启
     CAN2_IRQ_Enable();
+    // 使能 CAN1 的 FIFO0 接收中断，并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中开启
     CAN1_IRQ_Enable();
 
     while (1) {
-        /* 节点2 发 → 节点1 和分析仪收 */
+        /* CAN1发 → CAN2 和分析仪收 */
         for (i = 0; i < 8; i++) {
             buf[i] = (uint8_t) (tick + i);
         }
+        // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 CAN1_TEST_TX_ID 0x111）
         CAN1_SendStd(CAN1_TEST_TX_ID, buf, 8);
+        // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(200);
 
-        /* 节点1 发 → 节点2 和分析仪收 */
+        /* CAN2发 → CAN1 和分析仪收 */
         for (i = 0; i < 8; i++) {
             buf[i] = (uint8_t) (tick + 0x80 + i);
         }
+        // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 CAN1_TEST_TX_ID 0x112）
         CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
+        // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(200);
-
+        // 发送完一帧后，tick 加 1，为下一轮生成不同的数据内容
         tick++;
-
+        // 检查全局接收计数器 g_can2_rx_cnt 是否发生变化（说明中断里收到了新数据）
         if (last2 != g_can2_rx_cnt) {
+            // 更新 last2，以免重复打印同一条数据
             last2 = g_can2_rx_cnt;
+            // 打印接收到的报文信息：ID（Identifier，标识符）、首字节数据和总计接收数
             printf("CAN2 RX id=0x%03X d0=%02X cnt=%lu\r\n",
             (unsigned)g_can2_rx_id, (unsigned)g_can2_rx_buf[0],
             (unsigned long)g_can2_rx_cnt);
         }
+        // 检查全局接收计数器 g_can2_rx_cnt 是否发生变化（说明中断里收到了新数据）
         if (last1 != g_can1_rx_cnt) {
+            // 更新 last2，以免重复打印同一条数据
             last1 = g_can1_rx_cnt;
+            // 打印接收到的报文信息：ID（Identifier，标识符）、首字节数据和总计接收数
             printf("CAN1 RX id=0x%03X d0=%02X cnt=%lu\r\n",
             (unsigned)g_can1_rx_id, (unsigned)g_can1_rx_buf[0],
             (unsigned long)g_can1_rx_cnt);
         }
+        // 每 5 轮（约 2 秒）打印一次总线"体检报告"，避免串口刷屏
         if ((tick % 5u) == 0u) {
+            // 读取 CAN1 的错误状态寄存器 ESR（Error Status Register）快照
             esr1 = hcan1.Instance->ESR;
+            // 读取 CAN2 的错误状态寄存器 ESR 快照
             esr2 = hcan2.Instance->ESR;
+            // 一行打印：轮次 + CAN1 的 TEC/REC + CAN2 的 TEC/REC + 两边累计接收数
             printf("[%lu] CAN1 TEC=%lu REC=%lu | CAN2 TEC=%lu REC=%lu | rx1=%lu rx2=%lu\r\n",
             (unsigned long)tick,
-            (unsigned long) (esr1 & 0xFFu), (unsigned long) ((esr1 >> 16) & 0xFFu),
-            (unsigned long) (esr2 & 0xFFu), (unsigned long) ((esr2 >> 16) & 0xFFu),
-            (unsigned long)g_can1_rx_cnt, (unsigned long)g_can2_rx_cnt);
+            // CAN1 TEC：ESR[7:0]，发送错误计数器
+            (unsigned long) (esr1 & 0xFFu),
+            // CAN1 REC：ESR[23:16]，接收错误计数器
+            (unsigned long) ((esr1 >> 16) & 0xFFu),
+            // CAN2 TEC：ESR[7:0]
+            (unsigned long) (esr2 & 0xFFu),
+            // CAN2 REC：ESR[23:16]
+            (unsigned long) ((esr2 >> 16) & 0xFFu),
+            // CAN1 累计接收帧数
+            (unsigned long)g_can1_rx_cnt,
+            // CAN2 累计接收帧数
+            (unsigned long)g_can2_rx_cnt);
         }
     }
 }
