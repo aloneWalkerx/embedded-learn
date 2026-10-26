@@ -2,7 +2,6 @@
 #include "./SYSTEM/delay/delay.h"
 #include "./BSP/LED/led.h"
 #include "./SYSTEM/usart/usart.h"
-#include "./BSP/CAN/can.h"
 #include "./BSP/CAN/can_test.h"
 
 int main(void)
@@ -40,12 +39,12 @@ int main(void)
     //初始化串口
     can_usartx_init(115200);
     //环回自测
-    //can_test_loopback();
+    can_test_loopback();
     //正常模式
     //can_test_normal();
     //过滤指定ID
     //can_filter_list2();
-    can_node_test();
+    //can_node_test();
     while (1) {
 
     }

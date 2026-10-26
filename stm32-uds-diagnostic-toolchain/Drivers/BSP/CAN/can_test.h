@@ -11,7 +11,6 @@
 //发送周期
 #define TEST_PERIOD_MS      100
 //环回自测帧数
-#define TEST_LOOP_CNT       100
 //ECU 收请求（PC -> ECU）
 #define ISO_RX_ID           0x7E0u
 
@@ -46,7 +45,6 @@ void can_node_test(void);
 //单节点模式：本板发出的 ID
 #define TEST_TX_ID          0x100
 //单节点模式：发送周期
-#define TEST_PERIOD_MS      100
 //三节点：CAN1 发的 ID（CAN2/分析仪应收到）
 #define CAN1_TEST_TX_ID     0x111
 //三节点：CAN2 发的 ID（CAN1/分析仪应收到）

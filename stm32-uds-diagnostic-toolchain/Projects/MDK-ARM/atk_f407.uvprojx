@@ -419,14 +419,24 @@
               <FilePath>..\..\Drivers\BSP\LED\led.c</FilePath>
             </File>
             <File>
-              <FileName>can.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Drivers\BSP\CAN\can.c</FilePath>
-            </File>
-            <File>
               <FileName>can_test.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Drivers\BSP\CAN\can_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>can1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\CAN\can1.c</FilePath>
+            </File>
+            <File>
+              <FileName>can2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\CAN\can2.c</FilePath>
+            </File>
+            <File>
+              <FileName>common.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Drivers\BSP\CAN\common.c</FilePath>
             </File>
           </Files>
         </Group>

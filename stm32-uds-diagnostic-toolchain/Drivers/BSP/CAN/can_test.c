@@ -1,7 +1,12 @@
 #include "./BSP/CAN/can_test.h"
-#include "./BSP/CAN/can.h"
+//#include "./BSP/CAN/can.h"
+#include "./BSP/CAN/can1.h"
+#include "./BSP/CAN/can2.h"
+#include "./BSP/CAN/common.h"
 #include "./SYSTEM/delay/delay.h"
 #include "stdio.h"
+
+static uint32_t g_tx_cnt = 0;
 
 /**
  * @brief  CAN2 环回自测：发送 N 帧，再收回并校验，统计成功次数
@@ -101,18 +106,27 @@ void can_test_normal(void)
 
         // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(TEST_PERIOD_MS);
-
+        g_tx_cnt++;
         // 发送完一帧后，tick 加 1，为下一轮生成不同的数据内容
         tick++;
+        uint32_t now_cnt = g_can2_rx_cnt;           /* 先抓快照，防止打印期间被中断改 */
+        uint32_t delta = now_cnt - last_cnt;        /* 这一秒新增帧数 = 速率(帧/秒) */
+        uint32_t load_x100 = (delta * 222u) / 100u; /* 负载率 x100：111/500000 = 0.000222 */
+        printf("rx_cnt=%lu  tx_cnt=%lu  fps=%lu  load=%.2f%%\r\n",
+        (unsigned long)now_cnt, (unsigned long)g_tx_cnt,
+        (unsigned long)delta, delta * 111.0f * 100.0f / 500000.0f);
+        /* 每 10 个 tick（tick 周期 TEST_PERIOD_MS=100ms）打印一次 = 每秒一次
+         * 说明：不能把"累计收帧数"当成 fps。要算"这一秒新增了多少帧"，
+         *       再用 帧数 x 111 位 / 500000 位 得出总线负载率 */
+        if ((tick % 10u) == 0u) {
 
-        // 检查全局接收计数器 g_rx_cnt 是否发生变化（说明中断里收到了新数据）
-        if (g_can2_rx_cnt != last_cnt) {            /* 主循环只轮询标志，不在中断里打印 */
-            // 更新 last_cnt，以免重复打印同一条数据
-            last_cnt = g_can2_rx_cnt;
+            last_cnt = now_cnt;
 
-            // 打印接收到的报文信息：ID（Identifier，标识符）、DLC（Data Length Code，数据长度）、首字节数据和总计接收数
-            printf("RX id=0x%03X len=%u d0=%02X  total=%lu\r\n", g_can2_rx_id, g_can2_rx_len, g_can2_rx_buf[0],
-            (unsigned long)g_can2_rx_cnt);
+            printf("rx_cnt=%lu  fps=%lu  load=%lu.%02lu%%\r\n",
+            (unsigned long)now_cnt,
+            (unsigned long)delta,
+            (unsigned long) (load_x100 / 100u),
+            (unsigned long) (load_x100 % 100u));
         }
     }
 }

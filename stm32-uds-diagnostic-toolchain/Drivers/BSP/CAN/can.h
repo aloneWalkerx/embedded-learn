@@ -39,6 +39,8 @@
 #define CAN1_CLK_ENABLE()           do { __HAL_RCC_CAN1_CLK_ENABLE();}while(0)
 //使能CAN2
 #define CAN2_CLK_ENABLE()           do { __HAL_RCC_CAN2_CLK_ENABLE();}while(0)
+//使能GPIOA时钟（CAN1 的 PA11/PA12 在 GPIOA 上，别用 CAN2 的 GPIOB 宏）
+#define CAN1_GPIO_PORT_CLK_ENABLE()      do { __HAL_RCC_GPIOA_CLK_ENABLE();}while(0)
 
 /* -------------------------- 波特率选择 ------------------------------ */
 // 波特率选择值：500kbps

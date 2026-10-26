@@ -170,8 +170,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 
     // 判断是否为CAN1实例
     if (hcan->Instance == CAN1) {
-        // 使能GPIOA时钟（PA11/PA12需要）
-        CAN2_GPIO_PORT_CLK_ENABLE();
+        // 使能GPIOA时钟（PA11/PA12需要）。注意：这里必须是 GPIOA，不能用 CAN2 的 GPIOB 宏
+        CAN1_GPIO_PORT_CLK_ENABLE();
         //使能CAN1时钟
         CAN1_CLK_ENABLE();
         // 同时配置接收和发送引脚,PB12=RX, PB13=TX
