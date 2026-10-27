@@ -1,7 +1,7 @@
 #include "./BSP/CAN/common.h"
 #include "./BSP/CAN/can1.h"
 #include "./BSP/CAN/can2.h"
-
+#include "./SYSTEM/sys/sys.h"
 //CAN1接收ID
 volatile uint16_t g_can1_rx_id;
 //CAN1接收长度
@@ -27,6 +27,7 @@ volatile uint32_t g_can2_rx_cnt;
  */
 void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 {
+
     // 定义GPIO初始化结构体并清零
     GPIO_InitTypeDef gpio_init = {0};
 
@@ -81,7 +82,6 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-
     if (hcan->Instance == CAN1) {
         //定义一个结构体，用来装收到的ID、长度、帧类型等
         CAN_RxHeaderTypeDef rxHeader;
@@ -116,6 +116,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     }
 
     if (hcan->Instance == CAN2) {
+
         //定义一个结构体，用来装收到的ID、长度、帧类型等
         CAN_RxHeaderTypeDef rxHeader;
         // 定义一个 8 字节的数组，用来装数据

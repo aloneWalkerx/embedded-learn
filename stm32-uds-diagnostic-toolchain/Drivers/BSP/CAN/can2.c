@@ -89,6 +89,8 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
     CAN_TxHeaderTypeDef txHeader;
     // 用于返回选中的发送邮箱编号
     uint32_t mailbox;
+    //连续"邮箱满"的次数
+    static uint8_t busy_cnt = 0;
     // 检查数据长度是否超过最大8字节
     if (len > CAN_DLC_MAX) {
         // 超长返回参数错误
@@ -96,9 +98,17 @@ uint8_t CAN2_SendStd(uint16_t id, uint8_t *buf, uint8_t len)
     }
     // 查询空闲发送邮箱数量是否为0
     if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan2) == 0) {
+        /* 连续 3 次都满 → 说明帧卡死了，强制中止所有挂起的发送 */
+        if (++busy_cnt >= 3u) {
+            HAL_CAN_AbortTxRequest(&hcan2,
+            CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
+            busy_cnt = 0;
+            printf("TX 卡死，已强制清空邮箱\r\n");
+        }
         // 无空闲邮箱返回错误
         return CAN_ERR_NOBOX;
     }
+    busy_cnt = 0;
     // 标准ID（与0x7FF掩码，确保11位有效）
     txHeader.StdId = (uint32_t) (id & CAN_STD_ID_MASK);
     // 扩展ID置0（标准帧不用）
@@ -192,6 +202,7 @@ void CAN2_Filter_AcceptAll(void)
         // 配置失败打印提示（调试用）
         printf("filter FAIL\r\n");
     }
+
 }
 
 /**
@@ -220,8 +231,10 @@ void CAN2_IRQ_Enable(void)
  *         直接调用 HAL（Hardware Abstraction Layer，硬件抽象层）库的通用中断处理函数，
  *         由 HAL 库自动判断中断源、清除标志位，并调用相应的回调函数。
  */
+volatile uint32_t g_irq_cnt = 0;
 void CAN2_RX0_IRQHandler(void)
 {
+    g_irq_cnt++;
     // 调用 HAL 库的通用中断处理函数。
     HAL_CAN_IRQHandler(&hcan2);
 }
@@ -279,21 +292,18 @@ void CAN2_Filter_List2(uint16_t id1, uint16_t id2)
  */
 void CAN2_PrintStatus(void)
 {
-    // 读取 CAN2 的 ESR（错误状态寄存器）快照，避免多次访问寄存器
     uint32_t esr = hcan2.Instance->ESR;
 
-    // 打印一行：TEC、REC、LEC、BOFF，以及 HAL 错误码和状态
-    printf("TEC=%lu REC=%lu LEC=%lu BOFF=%lu | ERR=0x%08lX STATE=%d\r\n",
-    // ESR[7:0]  = TEC 发送错误计数器（0~255）
-    (unsigned long) (esr & 0xFFu),
-    // ESR[23:16] = REC 接收错误计数器（0~255）
-    (unsigned long) ((esr >> 16) & 0xFFu),
-    // ESR[6:4]  = LEC 最后错误代码（0~7，3位）
-    (unsigned long) ((esr >> 4) & 0x7u),
-    // ESR[2]    = BOFF Bus-Off 标志（1 表示已进入 Bus-Off）
-    (unsigned long) ((esr >> 2) & 0x1u),
-    // HAL_CAN_GetError() 返回累计的 HAL 错误标志（位掩码）
+    printf("TEC=%lu REC=%lu LEC=%lu BOFF=%lu EPV=%lu | ERR=0x%08lX STATE=%d\r\n",
+    (unsigned long) ((esr & CAN_ESR_TEC) >> CAN_ESR_TEC_Pos),
+    (unsigned long) ((esr & CAN_ESR_REC) >> CAN_ESR_REC_Pos),
+    (unsigned long) ((esr & CAN_ESR_LEC) >> CAN_ESR_LEC_Pos),
+    (unsigned long) ((esr & CAN_ESR_BOFF) >> CAN_ESR_BOFF_Pos),
+    (unsigned long) ((esr & CAN_ESR_EPVF) >> CAN_ESR_EPVF_Pos),
     (unsigned long)HAL_CAN_GetError(&hcan2),
-    // HAL_CAN_GetState() 返回 CAN 状态机状态（READY/BUSY/ERROR 等）
     (int)HAL_CAN_GetState(&hcan2));
+    printf("PB12=%lu TSR=0x%08X MSR=0x%08X\r\n",
+    (unsigned long) ((GPIOB->IDR >> 12) & 1u),      /* 1=隐性(正常) 0=显性(总线被拉死) */
+    (unsigned long)hcan2.Instance->TSR,
+    (unsigned long)hcan2.Instance->MSR);
 }

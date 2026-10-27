@@ -7,7 +7,8 @@
 #include "stdio.h"
 
 static uint32_t g_tx_cnt = 0;
-
+extern volatile uint32_t g_irq_cnt;
+static uint32_t fail_cnt = 0;
 /**
  * @brief  CAN2 环回自测：发送 N 帧，再收回并校验，统计成功次数
  * @return 成功完成"发-收-校验"的帧数（0 ~ TEST_LOOP_CNT）
@@ -87,46 +88,56 @@ void can_test_normal(void)
     // 初始化 CAN2 为 500K 波特率（Baud Rate，通信速率），参数 0 表示正常模式（非环回模式）
     //0 = 正常模式
     CAN2_Init(CAN_500K, 0);
-
     // 配置 CAN2 的接收过滤器，全部放行（接收总线上所有的 ID 报文）
     CAN2_Filter_AcceptAll();
-
     // 使能 CAN2 的 FIFO0 接收中断，并在 NVIC（Nested Vectored Interrupt Controller，嵌套向量中断控制器）中开启
     CAN2_IRQ_Enable();
-
     // 进入主循环，程序将一直在这里面运行
     while (1) {
+
         // 填充发送数据：每个字节的值 = 当前 tick 值 + 字节索引（0~7）
         for (i = 0; i < 8; i++) {
             buf[i] = (uint8_t) (tick + i);
         }
 
         // 调用发送函数，将 8 字节数据打包成标准数据帧发送出去，ID 为 TEST_TX_ID（通常是 0x123）
-        CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8);
+        if (CAN2_SendStd(CAN2_TEST_TX_ID, buf, 8) == CAN_OK) {
+            g_tx_cnt++;
+        } else {
+            //每 100 次只打一行
+            if ((fail_cnt++% 100u) == 0u) {
+                printf("send FAIL (累计 %lu 次)\r\n", (unsigned long)fail_cnt);
+            }
+
+        }
 
         // 延时等待（TEST_PERIOD_MS 通常是 100ms），控制发送频率
         delay_ms(TEST_PERIOD_MS);
-        g_tx_cnt++;
         // 发送完一帧后，tick 加 1，为下一轮生成不同的数据内容
         tick++;
-        uint32_t now_cnt = g_can2_rx_cnt;           /* 先抓快照，防止打印期间被中断改 */
-        uint32_t delta = now_cnt - last_cnt;        /* 这一秒新增帧数 = 速率(帧/秒) */
-        uint32_t load_x100 = (delta * 222u) / 100u; /* 负载率 x100：111/500000 = 0.000222 */
-        printf("rx_cnt=%lu  tx_cnt=%lu  fps=%lu  load=%.2f%%\r\n",
-        (unsigned long)now_cnt, (unsigned long)g_tx_cnt,
-        (unsigned long)delta, delta * 111.0f * 100.0f / 500000.0f);
+        //先抓快照，防止打印期间被中断改
+        uint32_t now_cnt = g_can2_rx_cnt;
+        //这一秒新增帧数 = 速率(帧/秒)
+        uint32_t delta = now_cnt - last_cnt;
+        //负载率 x100：111/500000 = 0.000222
+        uint32_t load_x100 = (delta * 222u) / 100u;
+        //此处负载率会被拆分为多条，因为延时和中断不能完全同步，比如测100帧每秒，那么就把发送的帧数从0-100的负载率相加即可
+        // printf("CAN2_SEND：rx_cnt=%lu  tx_cnt=%lu  fps=%lu  load=%.2f%%\r\n",
+        //(unsigned long)now_cnt, (unsigned long)g_tx_cnt,
+        //(unsigned long)delta, delta * 111.0f * 100.0f / 500000.0f);
         /* 每 10 个 tick（tick 周期 TEST_PERIOD_MS=100ms）打印一次 = 每秒一次
          * 说明：不能把"累计收帧数"当成 fps。要算"这一秒新增了多少帧"，
          *       再用 帧数 x 111 位 / 500000 位 得出总线负载率 */
+        if ((tick % 10u) == 0u) {CAN2_PrintStatus(); }
         if ((tick % 10u) == 0u) {
-
             last_cnt = now_cnt;
-
-            printf("rx_cnt=%lu  fps=%lu  load=%lu.%02lu%%\r\n",
+            //此处负载率会被拆分为多条，因为延时和中断不能完全同步,，比如测100帧每秒，那么就把收到的帧数从0-100的负载率相加即可
+            printf("CAN2_REC：rx_cnt=%lu  fps=%lu  load=%lu.%02lu%%\r\n",
             (unsigned long)now_cnt,
             (unsigned long)delta,
             (unsigned long) (load_x100 / 100u),
             (unsigned long) (load_x100 % 100u));
+
         }
     }
 }
@@ -200,9 +211,9 @@ void can_node_test(void)
     printf("\r\n---- 三节点自检（CAN1 -> 0x%03X，CAN2 -> 0x%03X）----\r\n",
     (unsigned)CAN1_TEST_TX_ID, (unsigned)CAN2_TEST_TX_ID);
     //初始化CAN2正常模式
-    CAN2_Init(CAN_500K, 0);
+    CAN2_Init(CAN_125K, 0);
     //初始化CAN1正常模式
-    CAN1_Init(CAN_500K, 0);
+    CAN1_Init(CAN_125K, 0);
     //CAN2滤波器
     CAN2_Filter_AcceptAll();
     //CAN1滤波器
