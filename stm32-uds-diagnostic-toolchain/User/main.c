@@ -4,8 +4,13 @@
 #include "./SYSTEM/usart/usart.h"
 #include "./BSP/CAN/can_test.h"
 #include "./BSP/CAN/can2.h"
+#include "./BSP/CAN/isotp.h"
+#include "./BSP/CAN/diag_cfg.h"
+#include "./BSP/CAN/common.h"
 int main(void)
 {
+    uint8_t test[20];
+    uint8_t i;
 
     /* ① HAL 库初始化
      * 内部做：复位所有外设、初始化 Flash 接口、配置 SysTick 为 1ms 中断
@@ -42,12 +47,28 @@ int main(void)
     //can_test_loopback();
 
     //正常模式
-    can_test_normal();
+    //can_test_normal();
     //过滤指定ID
     //can_filter_list2();
     //can_node_test();
-    while (1) {
 
+    CAN2_Init(CAN_500K, 0);
+    CAN2_Filter_List2(ISO_RX_ID, ISO_FUNC_ID);
+    CAN2_IRQ_Enable();
+    isotp_init(ISO_RX_ID, ISO_TX_ID);
+    while (1) {
+        /* 每秒发一条 20 字节测试报文（首帧 + 连续帧） */
+        for (i = 0; i < 20; i++) {
+            test[i] = (uint8_t)i;
+        }
+        printf("send 20B -> %s\r\n",
+        (isotp_send(test, 20) == 0) ? "ok" : "fail");
+
+        if (g_iso_req_pending) {
+            g_iso_req_pending = 0;
+            printf("rx complete!\r\n");
+        }
+        delay_ms(1000);
     }
 
 }

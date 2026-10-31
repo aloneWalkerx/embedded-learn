@@ -16,6 +16,15 @@
 //使能CAN2
 #define CAN2_CLK_ENABLE()                do { __HAL_RCC_CAN2_CLK_ENABLE();}while(0)
 
+//CAN2接收ID
+extern volatile uint16_t g_can2_rx_id;
+//CAN2接收长度
+extern volatile uint8_t g_can2_rx_len;
+//CAN2接收缓冲
+extern volatile uint8_t g_can2_rx_buf[8];
+//CAN2接收计数器
+extern volatile uint32_t g_can2_rx_cnt;
+
 // 声明CAN2的HAL句柄（在can.c中定义）
 extern CAN_HandleTypeDef hcan2;
 

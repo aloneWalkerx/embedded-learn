@@ -14,25 +14,6 @@
 //ECU 收请求（PC -> ECU）
 #define ISO_RX_ID           0x7E0u
 
-/* -------------------------- 变量定义 ------------------------------ */
-//CAN1接收ID
-extern volatile uint16_t g_can1_rx_id;
-//CAN1接收长度
-extern volatile uint8_t g_can1_rx_len;
-//CAN1接收缓冲
-extern volatile uint8_t g_can1_rx_buf[8];
-//CAN1接收计数器
-extern volatile uint32_t g_can1_rx_cnt;
-
-//CAN2接收ID
-extern volatile uint16_t g_can2_rx_id;
-//CAN2接收长度
-extern volatile uint8_t g_can2_rx_len;
-//CAN2接收缓冲
-extern volatile uint8_t g_can2_rx_buf[8];
-//CAN2接收计数器
-extern volatile uint32_t g_can2_rx_cnt;
-
 //环回测试
 void can_test_loopback(void);
 //正常模式

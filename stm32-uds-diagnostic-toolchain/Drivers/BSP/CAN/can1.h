@@ -18,6 +18,15 @@
 //CAN1的滤波器编号
 #define CAN1_FILTER_BANK        0
 
+//CAN1接收ID
+extern volatile uint16_t g_can1_rx_id;
+//CAN1接收长度
+extern volatile uint8_t g_can1_rx_len;
+//CAN1接收缓冲
+extern volatile uint8_t g_can1_rx_buf[8];
+//CAN1接收计数器
+extern volatile uint32_t g_can1_rx_cnt;
+
 //CAN1的HAL句柄
 extern CAN_HandleTypeDef hcan1;
 

@@ -43,7 +43,13 @@ static uint8_t s_tx_sn = 0;
 // 是否收到对端 FC：中断里置 1，iso_wait_fc 轮询到后清 0
 static volatile uint8_t s_fc_seen = 0;
 
-// 初始化 ISO-TP：设置收发 ID，清空状态机
+/**
+ * @brief  初始化 ISO-TP 传输层
+ * @param  rx_id: 接收诊断请求的 CAN ID（如 0x7E0）
+ * @param  tx_id: 发送诊断响应的 CAN ID（如 0x7E8）
+ * @note   设置收发 ID，清空接收状态机、发送忙标志、FC 标志和接收长度。
+ *         上电后调用一次即可。
+ */
 void isotp_init(uint16_t rx_id, uint16_t tx_id)
 {
     // 记录接收 ID
@@ -60,7 +66,11 @@ void isotp_init(uint16_t rx_id, uint16_t tx_id)
     g_iso_rx_len = 0;
 }
 
-// 复位 ISO-TP 状态机（异常恢复时调用）
+/**
+ * @brief  复位 ISO-TP 状态机
+ * @note   异常恢复时调用（如超时、序号错乱后），清接收状态机、发送忙标志、FC 标志。
+ *         不改变收发 ID，也不清空缓冲区内容。
+ */
 void isotp_reset(void)
 {
     // 清接收状态机
@@ -71,13 +81,22 @@ void isotp_reset(void)
     s_fc_seen = 0;
 }
 
-// 查询是否正在发多帧：1=忙，0=空闲
+/**
+ * @brief  查询是否正在发送多帧
+ * @return 1 = 忙（正在等 FC 或发 CF 中）；0 = 空闲
+ * @note   主循环在发下一包前可调用它，避免与上一包冲突。
+ */
 uint8_t isotp_is_busy(void) {
-    return s_tx_busy; 
+    return s_tx_busy;
 }
 
-/* 我方回 FC（告诉对端可以继续发） */
-// 发送流控帧：fs = 0(CTS) / 1(WAIT) / 2(OVFLW)
+/**
+ * @brief  发送流控帧（FC）
+ * @param  fs: 流控状态，0 = CTS（继续发）/ 1 = WAIT（等待）/ 2 = OVFLW（溢出）
+ * @note   我方作为接收方，收到 FF 后回 FC 告诉对端能否继续发。
+ *         帧格式：字节 0 = PCI | fs，字节 1 = BS（0 不限块），字节 2 = STmin（5ms），
+ *         字节 3~7 填 0。通过 CAN2 以 s_tx_id 发出。
+ */
 static void iso_send_fc(uint8_t fs)
 {
     // 临时缓冲，一帧 CAN 数据 8 字节
@@ -94,7 +113,18 @@ static void iso_send_fc(uint8_t fs)
     CAN2_SendStd(s_tx_id, f, 8);
 }
 
-// 收到一帧 CAN 数据时调用（由 CAN 中断回调调用）
+/**
+ * @brief  处理收到的一帧 CAN 数据（由 CAN 中断回调调用）
+ * @param  id:   收到的帧 ID
+ * @param  data: 数据指针（首字节是 PCI）
+ * @param  len:  数据长度（DLC，1~8）
+ * @note   按首字节高 4 位判断帧类型：
+ *         - SF（单帧）：拷贝数据到 g_iso_rx_buf，置 g_iso_req_pending
+ *         - FF（首帧）：解析总长度，拷贝前 6 字节，回 FC（CTS），进入收多帧状态
+ *         - CF（连续帧）：校验序号，拼接到 g_iso_rx_buf，收满置 g_iso_req_pending
+ *         - FC（流控帧）：置 s_fc_seen，供 isotp_send 的 iso_wait_fc 轮询
+ *         只处理 ID == s_rx_id 的帧，其他 ID 直接丢弃。不在 ISR 里回包。
+ */
 void isotp_rx_frame(uint16_t id, uint8_t *data, uint8_t len)
 {
     // PCI：首字节高 4 位，表示帧类型
@@ -121,14 +151,14 @@ void isotp_rx_frame(uint16_t id, uint8_t *data, uint8_t len)
             g_iso_rx_len = n;
             // 单帧结束，清接收状态机
             s_rx_active = 0;
-            // 置"有一包完整请求"标志，交给主循环 uds_poll() 处理
-            g_iso_req_pending = 1;                  /* 不在 ISR 里回包，交给 uds_poll() */
+            // 置"有一包完整请求"标志，交给主循环 uds_poll() 处理,不在 ISR 里回包，交给 uds_poll()
+            g_iso_req_pending = 1;
             break;
         }
         // ---- 首帧 ----
         case ISOTP_PCI_FF:
         {
-            // 12 位总长度：高 4 位在 data[0] 低 4 位，低 8 位在 data[1]
+            // 12 位总长度：高 4 位在 data[0]的 低 4 位，低 8 位在 data[1]
             uint16_t total = (uint16_t) (((uint16_t) (data[0] & ISOTP_LEN_MASK) << 8) | data[1]);
             // FF 带的数据字节数 = 总长度 - 2（PCI 占 1 字节，长度占 1 字节）
             uint8_t n = (uint8_t) (len - 2);
@@ -190,7 +220,14 @@ void isotp_rx_frame(uint16_t id, uint8_t *data, uint8_t len)
     }
 }
 
-// 等待对端 FC，超时返回 ISOTP_ERR
+/**
+ * @brief  等待对端回 FC（流控帧）
+ * @param  timeout_ms: 超时时间（毫秒）
+ * @return ISOTP_OK = 收到 FC；ISOTP_ERR = 超时
+ * @note   阻塞式轮询，每 1ms 检查一次 s_fc_seen。
+ *         收到 FC 后清 s_fc_seen，返回成功；超时返回失败。
+ *         s_fc_seen 由 isotp_rx_frame() 在中断里置位。
+ */
 static uint8_t iso_wait_fc(uint16_t timeout_ms)
 {
     // 计时变量（毫秒）
@@ -206,7 +243,16 @@ static uint8_t iso_wait_fc(uint16_t timeout_ms)
     return ISOTP_ERR;
 }
 
-// 发送一包数据（阻塞式，含 FC 等待）
+/**
+ * @brief  发送一包数据（阻塞式，含 FC 等待）
+ * @param  buf: 数据缓冲区指针
+ * @param  len: 数据长度（1~4095）
+ * @return ISOTP_OK = 成功；ISOTP_ERR = 失败（长度非法、发送失败、等 FC 超时）
+ * @note   长度 <= 7 字节：用单帧（SF）发出；
+ *         长度 > 7 字节：先发首帧（FF），等对端 FC，再逐帧发连续帧（CF），
+ *         每帧之间按 ISO_STMIN_MS（5ms）延时。
+ *         发送期间 s_tx_busy = 1，发送结束清 0。
+ */
 uint8_t isotp_send(uint8_t *buf, uint16_t len)
 {
     // 临时缓冲，一帧 CAN 数据 8 字节
