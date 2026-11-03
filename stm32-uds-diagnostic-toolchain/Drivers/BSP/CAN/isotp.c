@@ -133,7 +133,7 @@ void isotp_rx_frame(uint16_t id, uint8_t *data, uint8_t len)
     // ID 不匹配或数据长度 < 1，直接丢弃
     if (id != s_rx_id || len < 1)return;
     // 提取首字节高 4 位，判断帧类型
-    pci = (uint8_t) (data[0] & ISOTP_PCI_MASK);
+    pci = (uint8_t) (data[0] & ISOTP_PCI_MASK);     //0xF0u
 
     // 根据帧类型分派处理
     switch (pci)
@@ -142,7 +142,7 @@ void isotp_rx_frame(uint16_t id, uint8_t *data, uint8_t len)
         case ISOTP_PCI_SF:
         {
             // 低 4 位 = 数据长度（0~7）
-            uint8_t n = (uint8_t) (data[0] & ISOTP_LEN_MASK);
+            uint8_t n = (uint8_t) (data[0] & ISOTP_LEN_MASK); //0x0Fu
             // 长度非法（0、>7、或超过实际数据）则丢弃
             if (n == 0 || n > 7 || n > (len - 1))return;
             // 把数据从 data[1] 开始拷贝 n 字节到接收缓冲
@@ -280,7 +280,7 @@ uint8_t isotp_send(uint8_t *buf, uint16_t len)
 
     /* 首帧 */
     // 字节 0：PCI，高 4 位 = FF(0x10)，低 4 位 = 总长度的高 4 位
-    f[0] = (uint8_t) (ISOTP_PCI_FF | ((len >> 8) & ISOTP_LEN_MASK));
+    f[0] = (uint8_t) (ISOTP_PCI_FF | ((len >> 8) & ISOTP_LEN_MASK)); //0x0Fu
     // 字节 1：总长度的低 8 位
     f[1] = (uint8_t) (len & 0xFFU);
     // 字节 2~7：前 6 字节数据
@@ -308,7 +308,7 @@ uint8_t isotp_send(uint8_t *buf, uint16_t len)
         // 最多 7 字节（CF 数据段容量）
         if (n > 7)n = 7;
         // 字节 0：PCI，高 4 位 = CF(0x20)，低 4 位 = 序号
-        f[0] = (uint8_t) (ISOTP_PCI_CF | (s_tx_sn & ISOTP_LEN_MASK));
+        f[0] = (uint8_t) (ISOTP_PCI_CF | (s_tx_sn & ISOTP_LEN_MASK)); //0x0Fu
         // 拷贝 n 字节数据到 f[1..n]
         for (i = 0; i < n; i++)f[1 + i] = buf[off + i];
         // 剩余字节填填充字节 0xCC

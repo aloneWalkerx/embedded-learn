@@ -7,6 +7,9 @@
 #include "./BSP/CAN/isotp.h"
 #include "./BSP/CAN/diag_cfg.h"
 #include "./BSP/CAN/common.h"
+#include "./BSP/CAN/uds.h"
+/* ================= ECU 中断版：ISO-TP + UDS ================= */
+
 int main(void)
 {
     uint8_t test[20];
@@ -43,6 +46,7 @@ int main(void)
     can_led_init();
     //初始化串口
     can_usartx_init(115200);
+
     //环回自测
     //can_test_loopback();
 
@@ -56,19 +60,40 @@ int main(void)
     CAN2_Filter_List2(ISO_RX_ID, ISO_FUNC_ID);
     CAN2_IRQ_Enable();
     isotp_init(ISO_RX_ID, ISO_TX_ID);
-    while (1) {
-        /* 每秒发一条 20 字节测试报文（首帧 + 连续帧） */
-        for (i = 0; i < 20; i++) {
-            test[i] = (uint8_t)i;
-        }
-        printf("send 20B -> %s\r\n",
-        (isotp_send(test, 20) == 0) ? "ok" : "fail");
+    uds_init();
 
-        if (g_iso_req_pending) {
+    printf("\r\n=== ECU ready : RX=0x%03X  TX=0x%03X ===\r\n",
+    ISO_RX_ID, ISO_TX_ID);
+    while (1) {
+
+        if (g_iso_req_pending)
+        {
             g_iso_req_pending = 0;
-            printf("rx complete!\r\n");
+
+            printf("[UDS] req len=%u:", (unsigned)g_iso_rx_len);
+            for (i = 0; i < g_iso_rx_len && i < 8; i++)
+            {
+                printf(" %02X", (unsigned)g_iso_rx_buf[i]);
+            }
+            printf("\r\n");
+
+            uds_request(g_iso_rx_buf, g_iso_rx_len); /* 处理并回包 */
+
+            printf("[UDS] done\r\n");
         }
-        delay_ms(1000);
+        //D11 · 11/12（四）
+        //        /* 每秒发一条 20 字节测试报文（首帧 + 连续帧） */
+        //        for (i = 0; i < 20; i++) {
+        //            test[i] = (uint8_t)i;
+        //        }
+        //        printf("send 20B -> %s\r\n",
+        //        (isotp_send(test, 20) == 0) ? "ok" : "fail");
+
+        //        if (g_iso_req_pending) {
+        //            g_iso_req_pending = 0;
+        //            printf("rx complete!\r\n");
+        //        }
+        //        delay_ms(1000);
     }
 
 }

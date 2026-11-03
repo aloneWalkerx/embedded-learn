@@ -19,7 +19,7 @@ RTE/
 *.uvguix.*
 *.scvd
 *.iex
-
+*.log
 # ===== 系统/杂项 =====
 Thumbs.db
 Desktop.ini
