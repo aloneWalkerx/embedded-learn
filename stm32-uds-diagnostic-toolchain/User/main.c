@@ -10,11 +10,12 @@
 #include "./BSP/CAN/uds.h"
 /* ================= ECU 中断版：ISO-TP + UDS ================= */
 
+#define HEARTBEAT_MS        1000u                   /* 心跳打印周期，1 秒 */
 int main(void)
 {
     uint8_t test[20];
     uint8_t i;
-
+    uint32_t last_hb = 0;
     /* ① HAL 库初始化
      * 内部做：复位所有外设、初始化 Flash 接口、配置 SysTick 为 1ms 中断
      * 【必须放最前面】—— 后面的 HAL_Delay / delay 都依赖它配好的 SysTick */
@@ -56,31 +57,43 @@ int main(void)
     //can_filter_list2();
     //can_node_test();
 
+    /* CAN2 = ECU：只收 0x7E0 / 0x7DF */
     CAN2_Init(CAN_500K, 0);
     CAN2_Filter_List2(ISO_RX_ID, ISO_FUNC_ID);
     CAN2_IRQ_Enable();
+
     isotp_init(ISO_RX_ID, ISO_TX_ID);
     uds_init();
 
-    printf("\r\n=== ECU ready : RX=0x%03X  TX=0x%03X ===\r\n",
-    ISO_RX_ID, ISO_TX_ID);
+    printf("\r\n=== UDS ECU ready ===\r\n");
+    printf("RX=0x%03X  TX=0x%03X  VIN=%s\r\n", ISO_RX_ID, ISO_TX_ID, VIN_STR);
+
     while (1) {
 
-        if (g_iso_req_pending)
+        uds_poll();                                 /* 分发请求 + S3 超时 */
+
+        if ((HAL_GetTick() - last_hb) >= HEARTBEAT_MS)
         {
-            g_iso_req_pending = 0;
-
-            printf("[UDS] req len=%u:", (unsigned)g_iso_rx_len);
-            for (i = 0; i < g_iso_rx_len && i < 8; i++)
-            {
-                printf(" %02X", (unsigned)g_iso_rx_buf[i]);
-            }
-            printf("\r\n");
-
-            uds_request(g_iso_rx_buf, g_iso_rx_len); /* 处理并回包 */
-
-            printf("[UDS] done\r\n");
+            last_hb = HAL_GetTick();
+            printf("[HB] session=%u unlocked=%u\r\n",
+            uds_session(), uds_unlocked());
         }
+
+        //        if (g_iso_req_pending)
+        //        {
+        //            g_iso_req_pending = 0;
+
+        //            printf("[UDS] req len=%u:", (unsigned)g_iso_rx_len);
+        //            for (i = 0; i < g_iso_rx_len && i < 8; i++)
+        //            {
+        //                printf(" %02X", (unsigned)g_iso_rx_buf[i]);
+        //            }
+        //            printf("\r\n");
+
+        //            uds_request(g_iso_rx_buf, g_iso_rx_len); /* 处理并回包 */
+
+        //            printf("[UDS] done\r\n");
+        //        }
         //D11 · 11/12（四）
         //        /* 每秒发一条 20 字节测试报文（首帧 + 连续帧） */
         //        for (i = 0; i < 20; i++) {
