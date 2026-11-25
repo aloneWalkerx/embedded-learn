@@ -58,6 +58,9 @@ int main(void)
     //can_node_test();
 
     /* CAN2 = ECU£∫÷ª ’ 0x7E0 / 0x7DF */
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     CAN2_Init(CAN_500K, 0);
     CAN2_Filter_List2(ISO_RX_ID, ISO_FUNC_ID);
     CAN2_IRQ_Enable();
@@ -79,6 +82,7 @@ int main(void)
             uds_session(), uds_unlocked());
         }
 
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //        if (g_iso_req_pending)
         //        {
         //            g_iso_req_pending = 0;
@@ -107,6 +111,7 @@ int main(void)
         //            printf("rx complete!\r\n");
         //        }
         //        delay_ms(1000);
+
     }
 
 }

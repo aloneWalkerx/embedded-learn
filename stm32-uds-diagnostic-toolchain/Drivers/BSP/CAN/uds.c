@@ -30,6 +30,20 @@ static uint8_t s_unlocked = 0;
 // 最后一次收到诊断请求的时间（毫秒），用于 S3 会话保持超时判断
 static uint32_t s_last_req = 0;
 
+//0 = RNG 还没初始化，1 = 已经初始化过
+static uint8_t s_rng_ready = 0;
+//HAL 的 RNG 句柄，全工程只用一个
+static RNG_HandleTypeDef s_hrng;
+
+//最近一次发出的种子
+static uint32_t s_seed = 0;
+//是否已经发过种子
+static uint8_t s_seed_valid = 0;
+//连续错误次数
+static uint8_t s_attempts = 0;
+//锁定截止 tick
+static uint32_t s_lock_until = 0;
+
 /* 0x2E 写入的"指纹"，W7 刷写时由 uds_flash.c 读取 */
 // 存储通过 0x2E 服务写入的指纹数据（用于刷写前的身份校验，最大 20 字节）
 uint8_t g_fingerprint[20];
@@ -99,21 +113,6 @@ void uds_pending(uint8_t sid)
 }
 
 /**
- * @brief  初始化 UDS 诊断服务状态
- * @note   上电时调用。将会话重置为默认会话，清除解锁状态，
- *         并刷新最后请求时间，防止刚上电就触发 S3 超时。
- */
-void uds_init(void)
-{
-    // 默认进入默认会话（SESS_DEFAULT = 1）
-    s_session = SESS_DEFAULT;
-    // 默认处于锁定状态（安全访问未解锁）
-    s_unlocked = 0;
-    // 记录当前时间，作为 S3 计时器的起点
-    s_last_req = DIAG_TICK();
-}
-
-/**
  * @brief  处理 0x10 诊断会话控制服务
  * @param  req: 请求数据缓冲区
  * @param  len: 请求数据长度
@@ -139,7 +138,8 @@ static void svc_session(uint8_t *req, uint16_t len)
 
     // 验证通过，真正更新 ECU 内部的会话状态
     s_session = sub;
-
+    //换会话后旧种子作废
+    s_seed_valid = 0;
     // 关键安全机制：如果切回了“默认会话”，必须把安全解锁标志清零（重新上锁）
     if (sub == SESS_DEFAULT)s_unlocked = 0;         /* 回默认会话 → 上锁 */
 
@@ -367,6 +367,229 @@ static void svc_write_did(uint8_t *req, uint16_t len)
 }
 
 /**
+ * @brief  读取硬件真随机数（RNG）
+ * @return 返回一个 32 位无符号随机数；如果硬件出错，返回 0xDEADBEEF 兜底
+ * @note   第一次调用时会自动开启 RNG 外设时钟并初始化，后续调用直接取数。
+ *         使用硬件 RNG 比用 C 库的 rand() 安全得多，因为 rand() 是可预测的。
+ */
+static uint32_t rng_read(void)
+{
+    // 装读到的随机数，先清 0
+    uint32_t v = 0;
+
+    // 第一次调用才初始化：RNG 时钟、句柄、HAL_RNG_Init 都只做一遍
+    if (!s_rng_ready) {
+        // 打开 RNG 时钟（RNG 外设挂在 AHB2 总线上）
+        __HAL_RCC_RNG_CLK_ENABLE();
+        // 指定用哪个 RNG 外设（STM32F407 只有一个 RNG）
+        s_hrng.Instance = RNG;
+        // 初始化 RNG 外设，如果失败，返回一个固定的假随机数兜底（防止卡死）
+        if (HAL_RNG_Init(&s_hrng) != HAL_OK) {
+            return 0xDEADBEEFu;
+        }
+        // 记住了，下次不再初始化，提高后续调用的效率
+        s_rng_ready = 1;
+    }
+
+    // 取一个 32 位随机数；硬件熵源异常时 HAL 会返回错误（内部有超时机制，不会死等）
+    if (HAL_RNG_GenerateRandomNumber(&s_hrng, &v) != HAL_OK) {
+        // 超时兜底（比如硬件坏了，或者晶振没起振）
+        return 0xDEADBEEFu;
+    }
+
+    // v 就是真随机数，返回给调用者
+    return v;
+}
+
+/**
+ * @brief  生成安全访问的种子（Seed）
+ * @return 返回一个经过 UID 加盐混淆后的 32 位种子
+ * @note   UDS 的 0x27 服务第一步，ECU 会发给诊断仪一个随机数，这个数就是种子。
+ *         如果只用 RNG，断电重启后可能会产生重复的种子。加上芯片唯一 ID，就能保证绝不重复。
+ */
+static uint32_t make_seed(void)
+{
+    // UID 是每颗芯片唯一出厂固化的，加进来保证"同样的随机数在不同板子上也不同"
+    // 读取芯片 UID 的第 1 个字（32位）
+    uint32_t uid0 = HAL_GetUIDw0();
+    // 读取芯片 UID 的第 2 个字（32位）
+    uint32_t uid1 = HAL_GetUIDw1();
+
+    // 三步搅一起：随机数 ^ UID 低字 ^ (UID 高字 << 7)，左移让两个字的位错开
+    // 异或（^）运算的特性是：只要有一个位不同，结果就不同。把三个不同的数据揉在一起，碰撞概率极低。
+    return rng_read() ^ uid0 ^ (uid1 << 7);
+}
+
+/**
+ * @brief  根据种子计算密钥（Key）
+ * @param  seed: 之前发给诊断仪的种子
+ * @return 计算出的 32 位密钥
+ * @note   这是 UDS 安全访问的核心算法。诊断仪拿到种子后，用同样的算法算出密钥发过来，ECU 比对一致才解锁。
+ *         必须包含“异或、移位、加法”三种操作，缺一不可，这样生成的密钥最难被逆向破解。
+ */
+static uint32_t calc_key(uint32_t seed)
+{
+    // 第一步：异或。0xA5A5A5A5 是 10100101 重复 4 遍，位模式最"碎"
+    // 作用：把种子的二进制位彻底打乱，改变其原本的规律。
+    uint32_t k = seed ^ SEC_KEY_XOR;
+
+    // 第二步：循环左移 3 位。
+    // 左移 3 位后，最高 3 位会被挤掉溢出。所以必须把 k >> (32-3) = k >> 29 补回到最低 3 位，这才是真正的"循环"。
+    // 作用：让原本在高位的数字，跑到低位去参与后续运算，增加扩散性。
+    k = (k << SEC_KEY_ROT) | (k >> (32 - SEC_KEY_ROT)); /* 循环左移 */
+
+    // 第三步：加常量。加法会产生进位，比异或更能把高位的变化影响扩散到低位。
+    // 作用：进一步混淆数据，让输入哪怕只变 1 位，输出也会面目全非。
+    k += SEC_KEY_ADD;
+
+    // 这就是与种子对应的 4 字节密钥，返回给调用者
+    return k;
+}
+
+/**
+ * @brief  处理 0x27 安全访问服务（安保系统/对暗号）
+ * @param  req: 请求缓冲区（如 27 01 或 27 02 + 4字节密钥）
+ * @param  len: 请求长度
+ * @note   整个流程就像特务接头：
+ *         1. 客户说 27 01：“给我个暗号”（请求种子）。
+ *         2. 我们说 67 01 + 随机数：“暗号是 XXXX”。
+ *         3. 客户算出密码，发 27 02 + 密码：“我算出的密码是 YYYY”。
+ *         4. 我们核对，对上了就解锁（允许刷机）。
+ */
+static void svc_security(uint8_t *req, uint16_t len)
+{
+    // sub = 子功能（01/02）；r = 6 字节响应缓冲（67 + 子功能 + 4 字节种子）
+    uint8_t sub, r[6];
+    // key = 诊断仪送来的密钥；exp = 本机按种子算出的"标准答案"
+    uint32_t key, exp;
+
+    // 27 最少 2 字节：req[0]=0x27、req[1]=子功能
+    if (len < 2) {uds_nrc(SID_SECURITY, NRC_LENGTH); return; }
+    // 剥掉最高位抑制位，剩下的才是 01 或 02
+    sub = (uint8_t) (req[1] & SESS_SUB_MASK);
+
+    /* ================= 第一步：检查是不是被“拉黑”了 ================= */
+    // 锁定窗口：不能再用 s_attempts >= 3 判断！第三次错误后 s_attempts 会被清 0，若仍用 s_attempts 判断，锁就形同虚设。
+    // s_lock_until != 0 才说明锁过；再用"无符号相减后当有符号看 < 0"判断是否还没到点，这种写法在 tick 回绕（49 天）时也不会算错
+    if (s_lock_until != 0 &&
+    (int32_t) (DIAG_TICK() - s_lock_until) < 0) {
+        // 锁定期间 27 01 和 27 02 都回 0x36，别泄露"还差几次"这种信息
+        uds_nrc(SID_SECURITY, NRC_ATTEMPTS);
+        return;
+    }
+
+    /* ================= 第二步：分支一，客户要暗号（27 01） ================= */
+    if (sub == SEC_SEED_REQ) {
+        // 先置"发过种子"，否则紧接着的 27 02 会被当成序列错回 0x24
+        s_seed_valid = 1;
+        // 已经解锁了就不用再玩一轮：按 ISO 14229 回全 0 种子表示"无需解锁"
+        if (s_unlocked) {
+            r[0] = (uint8_t) (SID_SECURITY +UDS_POS_RESP_OFFSET); r[1] = SEC_SEED_REQ;
+            r[2] = 0; r[3] = 0; r[4] = 0; r[5] = 0; /* 4字节全0 = 已解锁 */
+            isotp_send(r, 6);
+            return;
+        }
+        // 每次 27 01 都重新造种子：同一秒连发两次也必须不一样，否则可被重放（黑客抓包复用）
+        s_seed = make_seed();
+        //正响应 67 01 + 4 字节种子，高位在前（大端）拆成 4 个字节
+        r[0] = (uint8_t) (SID_SECURITY +UDS_POS_RESP_OFFSET); r[1] = SEC_SEED_REQ;
+        //最高字节
+        r[2] = (uint8_t) (s_seed >> 24); r[3] = (uint8_t) (s_seed >> 16);
+        //最低字节
+        r[4] = (uint8_t) (s_seed >> 8); r[5] = (uint8_t)s_seed;
+        //6 字节：67 01 + 4 字节种子
+        isotp_send(r, 6);
+        return;
+    }
+
+    /* ================= 第三步：分支二，客户交密码（27 02） ================= */
+    if (sub == SEC_KEY_SEND) {
+        // 没先 27 01 就 27 02：序列错，回 0x24（这条要排在长度检查前面，防止没要暗号直接交密码）
+        if (!s_seed_valid) {uds_nrc(SID_SECURITY, NRC_SEQUENCE); return; }
+        // 27 02 + 4 字节密钥 = 6 字节，short 了拼不出 key
+        if (len < 6) {uds_nrc(SID_SECURITY, NRC_LENGTH); return; }
+
+        //4 个字节拼回 32 位密钥：req[2] 是最高字节，一路左移或下去（大端序拼装）
+        key = ((uint32_t)req[2] << 24) | ((uint32_t)req[3] << 16) |
+        ((uint32_t)req[4] << 8) | (uint32_t)req[5];
+        //本机按刚才发出去的种子算"标准答案"：异或 → 循环左移 3 → 加常量
+        exp = calc_key(s_seed);
+
+        // 密码对不上：先记账，再看是不是该上锁
+        if (key != exp) {
+            //连续错误次数 +1
+            s_attempts++;
+            // 够 3 次就开锁：记录解锁时刻 = 当前 tick + 10000ms（拉黑 10 秒）
+            if (s_attempts >= SEC_MAX_ATTEMPTS) {
+                s_lock_until = DIAG_TICK() + SEC_LOCK_MS;
+                //计数清零，改由 s_lock_until 管
+                s_attempts = 0;
+                //锁定后必须重新请求种子
+                s_seed_valid = 0;
+            }
+            // 这次本身还是回 0x35（密钥无效）；下一次开始才回 0x36（尝试次数超限）
+            uds_nrc(SID_SECURITY, NRC_KEY_INVALID);
+            return;
+        }
+
+        // 密码正确：解锁，并把计数/锁定/种子一次性清干净
+        s_unlocked = 1;
+        s_attempts = 0;
+        s_lock_until = 0;
+        // 一个种子只能用一次，用完作废，防重放（黑客不能拿旧密码反复用）
+        s_seed_valid = 0;
+        //正响应只有 2 字节：67 02（不带数据）
+        r[0] = (uint8_t) (SID_SECURITY +UDS_POS_RESP_OFFSET); r[1] = SEC_KEY_SEND;
+        isotp_send(r, 2);
+        return;
+    }
+
+    // 既不是 01 也不是 02（比如发了个 27 03）：子功能不支持
+    uds_nrc(SID_SECURITY, NRC_SUB_NOT_SUP);
+}
+
+/**
+ * @brief  处理 0x31 例程控制服务（当前为占位桩，只做权限校验）
+ * @param  req: 请求缓冲区（如 31 01 FF 00）
+ * @param  len: 请求长度
+ * @note   作用：控制 ECU 执行某个特定动作（如：擦除 APP 区、校验 APP 区）。
+ *         现阶段 Flash 驱动还没写，所以这里先把“权限校验”写好，具体干活的部分先回“一般失败”。
+ */
+static void svc_routine(uint8_t *req, uint16_t len)
+{
+    // sub 存子功能：01 启动 / 02 停止 / 03 查结果
+    uint8_t sub;
+
+    // 31 + 子功能 + 2 字节例程 ID = 最少 4 字节，少了取不到例程 ID
+    if (len < 4) {uds_nrc(SID_ROUTINE, NRC_LENGTH); return; }
+
+    // 剥掉最高位抑制位，只留子功能
+    sub = (uint8_t) (req[1] & SESS_SUB_MASK);
+
+    //桩只认"启动例程"；31 02（停止）/ 31 03（查结果）现在就回 0x12（子功能不支持）
+    if (sub != ROUTINE_START) {
+        uds_nrc(SID_ROUTINE, NRC_SUB_NOT_SUP);
+        return;
+    }
+
+    // 第一道门：默认会话不许做例程，回 0x22（条件不满足）顺序在解锁判断之前，因为如果客户连会话都没切，跟他谈解锁毫无意义
+    if (s_session == SESS_DEFAULT) {
+        uds_nrc(SID_ROUTINE, NRC_COND);
+        return;
+    }
+
+    // 第二道门：切了扩展/编程会话，但没通过 0x27 解锁，回 0x33（安全拒绝）
+    if (!s_unlocked) {
+        uds_nrc(SID_ROUTINE, NRC_SEC_DENIED);
+        return;
+    }
+
+    // 桩：还没有 Flash 驱动，统一回"一般失败"
+    // 两道门都过了才走到这里：真实现会在这里擦 Flash、校验，再回 71 01
+    uds_nrc(SID_ROUTINE, NRC_GENERAL_FAIL);
+}
+
+/**
  * @brief  处理一条完整的 UDS 诊断请求（核心分发器/总机转接员）
  * @param  req: 请求数据缓冲区（已经由 ISO-TP 拼好的完整数据）
  * @param  len: 请求数据的长度（字节数）
@@ -423,8 +646,10 @@ void uds_request(uint8_t *req, uint16_t len)
         // 诊断仪发来了 0x22（读数据），转接给 svc_read_did。
         // 这个稍微特殊：它的响应长度不固定（比如 VIN 20 字节），走 resp 缓冲。
         case SID_READ_DID:
-        n = svc_read_did(req, len, resp);           // 业务部门干活，把数据填进 resp，返回长度 n
-        if (n > 0)isotp_send(resp, n);              // 如果 n > 0（说明没出错），总机帮忙把 resp 发出去
+        // 业务部门干活，把数据填进 resp，返回长度 n
+        n = svc_read_did(req, len, resp);
+        // 如果 n > 0（说明没出错），总机帮忙把 resp 发出去
+        if (n > 0)isotp_send(resp, n);
         break;
 
         // 诊断仪发来了 0x2E（写数据），转接给 svc_write_did。
@@ -433,6 +658,14 @@ void uds_request(uint8_t *req, uint16_t len)
         svc_write_did(req, len);
         break;
 
+        // 0x27 安全访问：加完这行，27 01 / 27 02 才真正有人管
+        case SID_SECURITY:
+        svc_security(req, len);
+        break;
+        //处理 0x31 例程控制服务
+        case SID_ROUTINE:
+        svc_routine(req, len);
+        break;
         // 如果诊断仪发了个 0x99，在当前的 switch 列表里找不到对应的 case。
         // 说明这个服务还没实现或者不支持（比如还没写 0x27、0x31）。
         // 直接回复“服务不支持”的否定响应（7F SID 11）。
@@ -454,13 +687,13 @@ void uds_poll(void)
     /* --- 中断里只置标志，业务在这里做 ---
      * 原因：回长报文要等对端 FC，而 FC 也是 CAN 接收中断收到的。
      * 若直接在 ISR 里调 uds_request，就是自己等自己，200ms 超时。*/
-    
+
     // 检查“有一包完整请求待处理”的标志位（这个标志位是底层 isotp.c 收到完整数据后置 1 的）
     if (g_iso_req_pending) {
-        
+
         // 【关键】先把标志位清零。表示“这单生意我接下了”，防止下次循环重复处理同一个请求。
         g_iso_req_pending = 0;
-        
+
         // 把接收缓冲区 g_iso_rx_buf 里的数据，连同长度 g_iso_rx_len，丢给总机去分发。
         // 注意：uds_request 内部可能会调用 isotp_send 去回复长数据，这需要时间，
         // 这也是为什么必须放在主循环这里做，绝不能放在中断里做（放中断会死锁）。
@@ -470,17 +703,40 @@ void uds_poll(void)
     // ---------- 以下是 S3 会话超时监控机制 ----------
     // 国际标准规定：如果诊断仪切到了“扩展会话”或“编程会话”，但连续 5 秒没发任何新请求过来，
     // ECU 必须强行把它踢回“默认会话”（防止别人黑进系统，或者诊断仪拔了线导致ECU一直处于高级权限）。
-    
+
     // 条件1：当前不是默认会话（说明之前切过模式）
     // 条件2：当前时间 - 最后一次发请求的时间 > UDS_S3_MS（5000毫秒）
     if (s_session != SESS_DEFAULT &&
-        (uint32_t) (DIAG_TICK() - s_last_req) > UDS_S3_MS) {
-        
+    (uint32_t) (DIAG_TICK() - s_last_req) > UDS_S3_MS) {
+
         // 超时了！强制把会话降级回到“默认会话”
         s_session = SESS_DEFAULT;
-        
+
         // 同时，把安全解锁状态清零（重新上锁）。
         // 因为退回默认会话后，为了安全，所有的敏感操作权限全部作废。
         s_unlocked = 0;
+        //回默认会话后旧种子作废
+        s_seed_valid = 0;
     }
+}
+
+/**
+ * @brief  初始化 UDS 诊断服务状态
+ * @note   上电时调用。将会话重置为默认会话，清除解锁状态，
+ *         并刷新最后请求时间，防止刚上电就触发 S3 超时。
+ */
+void uds_init(void)
+{
+    // 默认进入默认会话（SESS_DEFAULT = 1）
+    s_session = SESS_DEFAULT;
+    // 默认处于锁定状态（安全访问未解锁）
+    s_unlocked = 0;
+    // 记录当前时间，作为 S3 计时器的起点
+    s_last_req = DIAG_TICK();
+    //上电没发过种子
+    s_seed_valid = 0;
+    //错误次数清零
+    s_attempts = 0;
+    //不在锁定窗口里
+    s_lock_until = 0;
 }

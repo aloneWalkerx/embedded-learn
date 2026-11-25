@@ -211,9 +211,9 @@ void can_node_test(void)
     printf("\r\n---- 三节点自检（CAN1 -> 0x%03X，CAN2 -> 0x%03X）----\r\n",
     (unsigned)CAN1_TEST_TX_ID, (unsigned)CAN2_TEST_TX_ID);
     //初始化CAN2正常模式
-    CAN2_Init(CAN_125K, 0);
+    CAN2_Init(CAN_500K, 0);
     //初始化CAN1正常模式
-    CAN1_Init(CAN_125K, 0);
+    CAN1_Init(CAN_500K, 0);
     //CAN2滤波器
     CAN2_Filter_AcceptAll();
     //CAN1滤波器

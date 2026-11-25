@@ -39,7 +39,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
         CAN1_GPIO_PORT_CLK_ENABLE();
         //使能CAN1时钟
         CAN1_CLK_ENABLE();
-        // 同时配置接收和发送引脚,PB12=RX, PB13=TX
+        // 同时配置接收和发送引脚, PA12=TX，PA11=RX
         gpio_init.Pin = CAN1_GPIO_TX_PIN | CAN1_GPIO_RX_PIN;
         // 复用推挽输出模式
         gpio_init.Mode = GPIO_MODE_AF_PP;
@@ -67,7 +67,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
     CAN1_CLK_ENABLE();
     // 使能CAN2时钟
     CAN2_CLK_ENABLE();
-    // 同时配置接收和发送引脚,PB12=RX, PB13=TX
+    // 同时配置接收和发送引脚,PB13=RX, PB12=TX
     gpio_init.Pin = CAN2_GPIO_TX_PIN | CAN2_GPIO_RX_PIN;
     // 复用推挽输出模式
     gpio_init.Mode = GPIO_MODE_AF_PP;
