@@ -22,3 +22,6 @@ RTE/
 # ===== 系统/杂项 =====
 Thumbs.db
 Desktop.ini
+
+# ===== 主机测试台（只在本机用，不进版本库）=====
+stm32-uds-diagnostic-toolchain/tests/
