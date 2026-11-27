@@ -9,6 +9,7 @@
 #include "./BSP/CAN/common.h"
 #include "./BSP/CAN/uds.h"
 #include "./BSP/CAN/flash.h"
+#include "./BSP/CAN/bootloader.h"
 /* ================= ECU 中断版：ISO-TP + UDS ================= */
 
 #define HEARTBEAT_MS        1000u                   /* 心跳打印周期，1 秒 */
@@ -49,8 +50,6 @@ int main(void)
     //初始化串口
     can_usartx_init(115200);
 
-    
-
     //环回自测
     //can_test_loopback();
 
@@ -74,7 +73,7 @@ int main(void)
     printf("\r\n=== UDS ECU ready ===\r\n");
     printf("RX=0x%03X  TX=0x%03X  VIN=%s\r\n", ISO_RX_ID, ISO_TX_ID, VIN_STR);
 
-  
+
 
     while (1) {
 

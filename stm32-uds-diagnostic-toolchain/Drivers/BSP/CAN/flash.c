@@ -14,8 +14,8 @@
  ******************************************************************
  */
 
-#include "flash.h"
-#include "diag_cfg.h"
+#include "./BSP/CAN/flash.h"
+#include "./BSP/CAN/diag_cfg.h"
 
 // 固件长度与 CRC，由 uds_flash.c 在下载过程中维护
 //有效固件字节数（不含末尾那 4 字节 CRC）
